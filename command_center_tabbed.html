@@ -246,6 +246,30 @@ body { background:var(--off-white); color:var(--text-primary); font-family:"Open
 .ti-load-moderate { background:var(--amber-light); color:var(--amber); }
 .ti-load-heavy { background:var(--red-light); color:var(--red); }
 .ti-load-vacation { background:#fffbeb; color:#d97706; }
+/* ── INBOX TRIAGE ── */
+.inbox-task { padding:12px 0; border-bottom:1px solid var(--light-gray); }
+.inbox-task:last-child { border-bottom:none; }
+.inbox-task-header { display:flex; align-items:flex-start; gap:10px; margin-bottom:6px; }
+.inbox-task-priority { font-size:11px; font-weight:700; padding:2px 8px; border-radius:10px; white-space:nowrap; }
+.inbox-task-priority.p-high { background:var(--red-light); color:var(--red); }
+.inbox-task-priority.p-medium { background:var(--amber-light); color:var(--amber); }
+.inbox-task-priority.p-low { background:var(--light-gray); color:var(--text-secondary); }
+.inbox-task-sender { font-size:12px; font-weight:700; color:var(--text-primary); }
+.inbox-task-subject { font-size:12px; color:var(--text-secondary); margin-top:2px; }
+.inbox-task-snippet { font-size:11px; color:var(--text-muted); margin-top:4px; font-style:italic; }
+.inbox-task-meta { display:flex; gap:8px; align-items:center; margin-top:4px; flex-wrap:wrap; }
+.inbox-task-folder { font-size:9px; font-weight:700; text-transform:uppercase; color:var(--text-muted); background:var(--light-gray); padding:1px 6px; border-radius:3px; }
+.inbox-task-time { font-size:10px; color:var(--text-muted); }
+.inbox-task-est { font-size:10px; font-weight:700; color:var(--accent); }
+.inbox-draft-box { margin-top:8px; background:var(--off-white); border:1px solid var(--border); border-radius:6px; padding:10px; }
+.inbox-draft-label { font-size:9px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:4px; }
+.inbox-draft-text { font-size:12px; color:var(--text-primary); line-height:1.5; white-space:pre-wrap; }
+.inbox-actions { display:flex; gap:6px; margin-top:8px; }
+.inbox-action-btn { padding:5px 10px; border-radius:5px; font-size:10px; font-weight:700; cursor:pointer; font-family:inherit; border:1px solid var(--border); background:var(--white); color:var(--text-secondary); }
+.inbox-action-btn:hover { background:var(--off-white); }
+.inbox-action-btn.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+.inbox-action-btn.danger { color:var(--red); border-color:var(--red-light); }
+.inbox-action-btn.success { color:var(--green); border-color:var(--green-light); }
 th.pt-sortable { cursor:pointer; user-select:none; position:relative; }
 th.pt-sortable:hover { color:var(--accent); }
 th.pt-sortable::after { content:'⇅'; font-size:9px; margin-left:3px; opacity:0.3; }
@@ -636,20 +660,26 @@ tr.pt-drop-below { box-shadow:0 3px 0 0 var(--accent); }
 <div class="tab-content" id="content-inbox">
 <div class="main">
 
-  <!-- INBOX -->
-  <div class="section-label">📥 Inbox Triage — 1-Review · 2-To Respond · 4.5-David to Do</div>
+  <!-- INBOX TRIAGE -->
+  <div class="section-label">📥 Inbox Triage — AI-Classified &amp; Prioritized</div>
   <div style="margin-bottom:16px;">
     <div class="card">
-      <div class="card-header">
-        <span class="card-title">📥 Inbox Tasks — Priority Sorted</span>
-        <span id="inboxStatus" class="badge badge-gray">Loading…</span>
+      <div class="card-header" style="flex-wrap:wrap;gap:8px;">
+        <span class="card-title">📥 Inbox Tasks</span>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span id="inboxStatus" class="badge badge-gray">Loading…</span>
+          <div style="display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;">
+            <button class="inbox-tab-btn active" onclick="inboxSetView('respond')" style="padding:4px 10px;font-size:10px;font-weight:700;border:none;background:var(--accent);color:#fff;cursor:pointer;font-family:inherit;">✉️ To Respond</button>
+            <button class="inbox-tab-btn" onclick="inboxSetView('todo')" style="padding:4px 10px;font-size:10px;font-weight:700;border:none;background:var(--white);color:var(--text-muted);cursor:pointer;font-family:inherit;">📋 To Do</button>
+            <button class="inbox-tab-btn" onclick="inboxSetView('waiting')" style="padding:4px 10px;font-size:10px;font-weight:700;border:none;background:var(--white);color:var(--text-muted);cursor:pointer;font-family:inherit;">⏳ Waiting</button>
+            <button class="inbox-tab-btn" onclick="inboxSetView('all')" style="padding:4px 10px;font-size:10px;font-weight:700;border:none;background:var(--white);color:var(--text-muted);cursor:pointer;font-family:inherit;">All</button>
+          </div>
+        </div>
       </div>
       <div class="card-body" id="inboxBody">
         <div class="skeleton" style="width:100%"></div>
         <div class="skeleton" style="width:85%"></div>
         <div class="skeleton" style="width:90%"></div>
-        <div class="skeleton" style="width:75%"></div>
-        <div class="skeleton" style="width:95%"></div>
       </div>
     </div>
   </div>
@@ -1216,55 +1246,141 @@ async function sbUpsert(table, row) {
 }
 
 // ── INBOX ────────────────────────────────────────────────────
-async function loadInbox() {
-  const el = document.getElementById("inboxBody");
-  const statusEl = document.getElementById("inboxStatus");
-  const todayStr = new Date().toISOString().split('T')[0];
-  try {
-    const rows = await sbFetch("briefing_log", {
-      select: "date,top_priority_1,top_priority_2,top_priority_3,protect_today,carry_overs",
-      order: "date.desc",
-      limit: 1
+// ── INBOX TRIAGE ────────────────────────────────────────────
+let inboxRows = [];
+let inboxCurrentView = 'respond';
+const EMAIL_FN_URL = SB_URL + '/functions/v1/email-actions';
+
+function escHtml(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+async function emailAction(body) {
+  await fetch(EMAIL_FN_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': SB_HDR['Authorization'], 'apikey': SB_KEY },
+    body: JSON.stringify(body)
+  });
+  loadInbox();
+}
+
+function copyDraft(id) {
+  var task = inboxRows.find(function(r){ return r.id === id; });
+  if (task && task.draft_reply) {
+    navigator.clipboard.writeText(task.draft_reply).then(function(){
+      var btn = document.getElementById('copy-btn-' + id);
+      if (btn) { btn.textContent = '✓ Copied'; setTimeout(function(){ btn.textContent = '📋 Copy Draft'; }, 2000); }
     });
+  }
+}
 
-    if (!rows.length) throw new Error("No briefing logged yet");
+function inboxSetView(view) {
+  inboxCurrentView = view;
+  document.querySelectorAll('.inbox-tab-btn').forEach(function(btn, i) {
+    var views = ['respond','todo','waiting','all'];
+    var active = views[i] === view;
+    btn.style.background = active ? 'var(--accent)' : 'var(--white)';
+    btn.style.color = active ? '#fff' : 'var(--text-muted)';
+  });
+  renderInboxRows();
+}
 
-    const b = rows[0];
-    const isToday = b.date === todayStr;
-    statusEl.className = isToday ? "badge badge-green" : "badge badge-amber";
-    statusEl.textContent = isToday ? "Today's briefing" : "Last: " + b.date;
+function renderInboxRows() {
+  var el = document.getElementById('inboxBody');
+  var folderMap = {
+    respond: ['2-to-respond'],
+    todo: ['4.5-to-do'],
+    waiting: ['4-waiting'],
+    all: null
+  };
+  var folders = folderMap[inboxCurrentView];
+  var filtered = inboxRows.filter(function(r) {
+    if (r.status === 'done') return false;
+    if (r.status === 'snoozed' && r.snoozed_until && new Date(r.snoozed_until) > new Date()) return false;
+    if (folders) return folders.indexOf(r.folder_target) >= 0;
+    return true;
+  }).sort(function(a, b) { return (b.priority || 0) - (a.priority || 0); });
 
-    const items = [
-      b.top_priority_1 ? { priority: "TODAY", label: "Priority 1", text: b.top_priority_1 } : null,
-      b.top_priority_2 ? { priority: "TODAY", label: "Priority 2", text: b.top_priority_2 } : null,
-      b.top_priority_3 ? { priority: "THIS_WEEK", label: "Priority 3", text: b.top_priority_3 } : null,
-      b.protect_today  ? { priority: "THIS_WEEK", label: "Protect Today", text: b.protect_today } : null,
-      b.carry_overs    ? { priority: "THIS_WEEK", label: "Carry Over", text: b.carry_overs } : null,
-    ].filter(Boolean);
-
-    const tagMap = {
-      TODAY: '<span class="tag-today">🔴 Today</span>',
-      THIS_WEEK: '<span class="tag-week">🟡 This Week</span>'
+  if (filtered.length === 0) {
+    var emptyMsg = {
+      respond: 'No emails needing a response right now.',
+      todo: 'No tasks in your to-do queue.',
+      waiting: 'Not waiting on any replies.',
+      all: 'Inbox is clear — no active tasks.'
     };
+    el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:12px;">' + (emptyMsg[inboxCurrentView] || 'No tasks.') + '</div>';
+    return;
+  }
 
-    el.innerHTML = items.map(item => `
-      <div class="inbox-item">
-        <div style="min-width:0;flex:1">
-          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px;">
-            ${tagMap[item.priority]||""}
-            <span class="inbox-folder">${item.label}</span>
-          </div>
-          <div class="inbox-subject">${item.text}</div>
-        </div>
-      </div>`).join("") || `<div class="connect-note">No priorities found in last briefing.</div>`;
+  el.innerHTML = filtered.map(function(r) {
+    var pClass = r.priority >= 70 ? 'p-high' : r.priority >= 40 ? 'p-medium' : 'p-low';
+    var pLabel = r.priority >= 70 ? 'High' : r.priority >= 40 ? 'Medium' : 'Low';
+    var folderLabels = {
+      '2-to-respond': 'To Respond', '4.5-to-do': 'To Do', '4-waiting': 'Waiting',
+      '5-financial': 'Financial', '6-newsletter': 'Newsletter', '7-meetings': 'Meetings',
+      '8-cc': 'CC', '9-payroll': 'Payroll', '10-feedback': 'Feedback', '11-financial-emails': 'NetSuite'
+    };
+    var timeAgo = r.received_at ? new Date(r.received_at).toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' }) : '';
 
+    var html = '<div class="inbox-task">';
+    html += '<div class="inbox-task-header">';
+    html += '<span class="inbox-task-priority ' + pClass + '">' + pLabel + '</span>';
+    html += '<div style="flex:1;min-width:0;">';
+    html += '<div class="inbox-task-sender">' + escHtml(r.sender || r.sender_email) + '</div>';
+    html += '<div class="inbox-task-subject">' + escHtml(r.subject) + '</div>';
+    html += '</div>';
+    if (r.time_estimate) html += '<span class="inbox-task-est">⏱ ' + escHtml(r.time_estimate) + '</span>';
+    html += '</div>';
+
+    if (r.snippet) html += '<div class="inbox-task-snippet">' + escHtml(r.snippet) + '</div>';
+
+    html += '<div class="inbox-task-meta">';
+    html += '<span class="inbox-task-folder">' + (folderLabels[r.folder_target] || r.folder_target) + '</span>';
+    html += '<span class="inbox-task-time">' + timeAgo + '</span>';
+    if (r.status === 'in_progress') html += '<span class="badge badge-amber" style="font-size:9px;">In Progress</span>';
+    html += '</div>';
+
+    // Draft reply section
+    if (r.draft_reply && r.folder_target === '2-to-respond') {
+      html += '<div class="inbox-draft-box">';
+      html += '<div class="inbox-draft-label">AI Draft Reply</div>';
+      html += '<div class="inbox-draft-text">' + escHtml(r.draft_reply) + '</div>';
+      html += '</div>';
+    }
+
+    // Action buttons
+    html += '<div class="inbox-actions">';
+    if (r.draft_reply) {
+      html += '<button class="inbox-action-btn primary" id="copy-btn-' + r.id + '" onclick="copyDraft(' + r.id + ')">📋 Copy Draft</button>';
+      html += '<button class="inbox-action-btn success" onclick="emailAction({action:\'approve_draft\',id:' + r.id + '})">✓ Done</button>';
+    }
+    if (r.status !== 'in_progress') html += '<button class="inbox-action-btn" onclick="emailAction({action:\'mark_in_progress\',id:' + r.id + '})">🔄 In Progress</button>';
+    html += '<button class="inbox-action-btn" onclick="emailAction({action:\'snooze\',id:' + r.id + '})">⏰ Snooze 2h</button>';
+    html += '<button class="inbox-action-btn danger" onclick="emailAction({action:\'dismiss\',id:' + r.id + '})">✕ Dismiss</button>';
+    html += '</div>';
+
+    html += '</div>';
+    return html;
+  }).join('');
+}
+
+async function loadInbox() {
+  var el = document.getElementById("inboxBody");
+  var statusEl = document.getElementById("inboxStatus");
+  try {
+    var url = SB_URL + '/rest/v1/inbox_tasks?status=neq.done&order=priority.desc&limit=100';
+    var res = await fetch(url, { headers: SB_HDR });
+    inboxRows = await res.json();
+    if (!Array.isArray(inboxRows)) inboxRows = [];
+
+    var activeCount = inboxRows.filter(function(r){ return r.status === 'new' || r.status === 'in_progress'; }).length;
+    var respondCount = inboxRows.filter(function(r){ return r.folder_target === '2-to-respond' && r.status !== 'done'; }).length;
+    statusEl.className = activeCount > 0 ? "badge badge-red" : "badge badge-green";
+    statusEl.textContent = activeCount > 0 ? activeCount + " tasks · " + respondCount + " to respond" : "Inbox clear";
+
+    renderInboxRows();
   } catch(err) {
     statusEl.className = "badge badge-amber";
-    statusEl.textContent = "No briefing yet";
-    el.innerHTML = `<div class="connect-note">
-      <b>Type BRIEFING in Claude to populate this section.</b><br>
-      <span style="opacity:0.7;font-size:10px;">${err.message}</span>
-    </div>`;
+    statusEl.textContent = "Loading…";
+    el.innerHTML = '<div class="connect-note">Inbox triage will populate once the scheduled task runs.<br><span style="opacity:0.7;font-size:10px;">' + err.message + '</span></div>';
   }
 }
 
