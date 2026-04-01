@@ -655,37 +655,48 @@ body { background:var(--off-white); color:var(--text-primary); font-family:Tahom
           <div style="display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;">
             <button class="pt-tab-btn active" onclick="ptSetView('priority')" style="padding:4px 10px;font-size:10px;font-weight:700;border:none;background:var(--accent);color:#fff;cursor:pointer;font-family:inherit;">⭐ Top Priority</button>
             <button class="pt-tab-btn" onclick="ptSetView('all')" style="padding:4px 10px;font-size:10px;font-weight:700;border:none;background:var(--white);color:var(--text-muted);cursor:pointer;font-family:inherit;">All Projects</button>
-            <button class="pt-tab-btn" onclick="ptSetView('nonneg')" style="padding:4px 10px;font-size:10px;font-weight:700;border:none;background:var(--white);color:var(--text-muted);cursor:pointer;font-family:inherit;">🚨 Non-Neg Ops</button>
+            <button class="pt-tab-btn" onclick="ptSetView('nonneg')" style="padding:4px 10px;font-size:10px;font-weight:700;border:none;background:var(--white);color:var(--text-muted);cursor:pointer;font-family:inherit;">🚨 Non-Neg</button>
+            <button class="pt-tab-btn" onclick="ptSetView('done')" style="padding:4px 10px;font-size:10px;font-weight:700;border:none;background:var(--white);color:var(--text-muted);cursor:pointer;font-family:inherit;">✅ Done</button>
           </div>
         </div>
       </div>
       <div style="padding:8px 16px;display:flex;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--light-gray);background:var(--off-white);">
-        <span style="font-size:10px;display:flex;align-items:center;gap:4px;"><span style="background:var(--red-light);color:var(--red);padding:1px 6px;border-radius:4px;font-weight:700;">🔴 RED</span> Active blocker</span>
-        <span style="font-size:10px;display:flex;align-items:center;gap:4px;"><span style="background:var(--amber-light);color:var(--amber);padding:1px 6px;border-radius:4px;font-weight:700;">🟡 AMBER</span> In progress</span>
-        <span style="font-size:10px;display:flex;align-items:center;gap:4px;"><span style="background:var(--green-light);color:var(--green);padding:1px 6px;border-radius:4px;font-weight:700;">🟢 GREEN</span> On track</span>
-        <span style="font-size:10px;display:flex;align-items:center;gap:4px;"><span style="background:var(--light-gray);color:var(--text-secondary);padding:1px 6px;border-radius:4px;font-weight:700;">⚫ TBD</span> Queued</span>
+        <span style="font-size:10px;display:flex;align-items:center;gap:4px;"><span class="badge badge-red">🔴</span> Active blocker</span>
+        <span style="font-size:10px;display:flex;align-items:center;gap:4px;"><span class="badge badge-amber">🟡</span> In progress</span>
+        <span style="font-size:10px;display:flex;align-items:center;gap:4px;"><span class="badge badge-green">🟢</span> On track</span>
+        <span style="font-size:10px;display:flex;align-items:center;gap:4px;"><span class="badge badge-gray">⚫</span> Queued</span>
         <span style="font-size:10px;color:var(--text-muted);margin-left:auto;">$ Value = estimated annual revenue or efficiency gain</span>
       </div>
       <div class="data-table-wrap" style="padding:0;" id="projectsBody">
         <div id="ptViewPriority">
           <table class="data-table" style="min-width:700px;">
-            <thead><tr><th>Project</th><th>Owner</th><th>Due</th><th>Est. Time</th><th style="color:var(--green);">$ Value/yr</th><th>Status</th><th>Next Action</th></tr></thead>
-            <tbody id="ptTablePriority">
-              <tr><td colspan="7"><div class="skeleton"></div></td></tr>
-            </tbody>
+            <thead><tr><th style="width:30px;"></th><th style="width:24px;"></th><th>Project</th><th>Owner</th><th>Due</th><th>Est. Time</th><th style="color:var(--green);">$ Value/yr</th><th>Status</th><th>Next Action</th></tr></thead>
+            <tbody id="ptTablePriority"><tr><td colspan="9"><div class="skeleton"></div></td></tr></tbody>
           </table>
         </div>
         <div id="ptViewAll" style="display:none;">
           <table class="data-table" style="min-width:700px;">
-            <thead><tr><th>Project</th><th>Owner</th><th>Due</th><th>Est. Time</th><th style="color:var(--green);">$ Value/yr</th><th>Value Type</th><th>Status</th><th>Next Action</th></tr></thead>
+            <thead><tr><th style="width:30px;"></th><th>Project</th><th>Owner</th><th>Due</th><th>Est. Time</th><th style="color:var(--green);">$ Value/yr</th><th>Value Type</th><th>Status</th><th>Next Action</th></tr></thead>
             <tbody id="ptTableAll"></tbody>
           </table>
         </div>
         <div id="ptViewNonNeg" style="display:none;">
           <div style="padding:10px 14px;background:#fff5f5;border-bottom:1px solid #fecaca;font-size:11px;color:#991b1b;font-weight:700;">🚨 Non-Negotiable Ops — Required. No direct revenue but cannot be skipped.</div>
           <table class="data-table" style="min-width:700px;">
-            <thead><tr><th>Item</th><th>Owner</th><th>Due</th><th>Est. Time</th><th>Risk / Value</th><th>Status</th><th>Next Action</th></tr></thead>
+            <thead><tr><th style="width:30px;"></th><th>Item</th><th>Owner</th><th>Due</th><th>Est. Time</th><th>Risk / Value</th><th>Status</th><th>Next Action</th></tr></thead>
             <tbody id="ptTableNonNeg"></tbody>
+          </table>
+        </div>
+        <div id="ptViewDone" style="display:none;">
+          <div style="padding:10px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--light-gray);background:var(--off-white);">
+            <span style="font-size:11px;font-weight:700;color:var(--text-secondary);">Completed Projects</span>
+            <label style="font-size:10px;color:var(--text-muted);display:flex;align-items:center;gap:4px;margin-left:auto;">
+              Since: <input type="date" id="ptDoneFilter" style="font-size:10px;padding:2px 6px;border:1px solid var(--border);border-radius:4px;font-family:inherit;" onchange="ptFilterDone()">
+            </label>
+          </div>
+          <table class="data-table" style="min-width:700px;">
+            <thead><tr><th>Project</th><th>Owner</th><th>Completed</th><th>Status</th><th style="width:80px;"></th></tr></thead>
+            <tbody id="ptTableDone"></tbody>
           </table>
         </div>
       </div>
@@ -1117,55 +1128,17 @@ async function loadHealth() {
 // ── PROJECTS ─────────────────────────────────────────────────
 // ── PROJECT TRACKER ────────────────────────────────────────────────────────
 
-const PT_PRIORITY = [
-  // [project, owner, due, estTime, dollarValue, valueType, status, nextAction]
-  ["Sean + Lauren Offer Letters",          "David",          "Mar 28",   "1.5 hrs",  "$500K-1M+",  "Revenue",           "RED",   "Finalize on return. They can't start without it."],
-  ["Sales Executive Hire — Write JD",      "David",          "Apr 30",   "3 hrs",    "$500K-1M+",  "Revenue",           "RED",   "60-90 day search clock starts when JD is posted."],
-  ["HubSpot Configuration",                "David",          "Apr 15",   "4 hrs",    "$250K+",     "Revenue Enabler",   "AMBER", "Schedule 2-hr config session — pipeline stages, lead routing."],
-  ["Follow-Up Felix — Build",              "David",          "Apr 30",   "16 hrs",   "$200K+",     "Revenue Proposals", "TBD",   "Complete design. Then build in n8n."],
-  ["Anchor Account Program — Top 20",      "David",          "Apr 30",   "4 hrs",    "$300K+",     "Revenue Retention", "AMBER", "List top 20 clients by spend. Assign internal owner."],
-  ["Shopify B2B Overhaul",                 "David",          "Jun 1",    "12 hrs",   "$150K+",     "Self-Service",      "TBD",   "Research Shopify Plus cost. Enable net terms, PO fields."],
-];
+// Projects loaded from Supabase
+let ptProjects = []; // all active projects
+let ptDoneProjects = []; // completed projects
 
-const PT_ALL = [
-  // Tech & Systems
-  ["HubSpot Configuration",               "David",          "Apr 15",   "4 hrs",    "$250K+/yr",  "Revenue Enabler",         "AMBER", "Schedule 2-hr config session."],
-  ["Qwilr Implementation",                "David",          "May 1",    "6 hrs",    "$75K+/yr",   "Efficiency + Close Rate",  "AMBER", "Stop PowerPoints for $5K+ quotes. Build 4 templates."],
-  ["Shopify B2B Overhaul",                "David",          "Jun 1",    "12 hrs",   "$150K+/yr",  "Revenue — Self-Service",   "TBD",   "Research Shopify Plus cost."],
-  ["NetSuite Quote-to-Contract",          "David/Jennifer", "Jun 15",   "8 hrs",    "$50K+/yr",   "Efficiency",              "AMBER", "NetSuite → Qwilr → e-sign → NetSuite confirm."],
-  ["n8n Setup on Mac Mini",               "David",          "Apr 10",   "2 hrs",    "Enables Bots","Infrastructure",          "TBD",   "Install Homebrew, Ollama, n8n."],
-  // Sales & Marketing
-  ["Sales Executive Hire",                "David",          "Apr 30",   "Ongoing",  "$500K-1M+/yr","Direct Revenue",          "RED",   "Write JD this week. 60-90 day search."],
-  ["Sean — Offer Letter + Commission",    "David",          "Mar 28",   "1 hr",     "Book of Biz", "Revenue",                 "RED",   "Finalize on return. W-2 + temp commission."],
-  ["Lauren — Offer Letter + Commission",  "David",          "Mar 28",   "1 hr",     "Book of Biz", "Revenue",                 "RED",   "Same as Sean. Both needed before Day 1."],
-  ["HubSpot Sales Pipeline Live",         "David",          "Apr 15",   "2 hrs",    "$150K+/yr",  "Pipeline Visibility",     "AMBER", "Dependent on HubSpot config."],
-  ["Anchor Account Program",              "David",          "Apr 30",   "4 hrs",    "$300K+/yr",  "Revenue Retention",       "AMBER", "Top 20 clients by spend. Assign owners."],
-  ["Spring/Summer Menu Restructure",      "David",          "Active",   "6 hrs",    "$100K+/yr",  "Revenue + Reactivation",  "AMBER", "15-page PDF by time of day. Packages TBD."],
-  ["Vertical Landing Pages (5)",          "David/Mktg",     "Jun 1",    "20 hrs",   "$200K+/yr",  "Inbound Revenue",         "TBD",   "Financial, legal, AEC, nonprofit, tech."],
-  // Bots
-  ["Follow-Up Felix",                     "David",          "Apr 30",   "16 hrs",   "$200K+/yr",  "Revenue — Proposals",     "TBD",   "Complete 3 remaining design components."],
-  ["Intake Iris",                         "David",          "May 31",   "12 hrs",   "$150K+/yr",  "Revenue — Lead Response", "TBD",   "After Felix. Inbound under 60 sec."],
-  ["Menu Maya",                           "David",          "Jul 1",    "10 hrs",   "$50K+/yr",   "Efficiency",              "TBD",   "Shopify concierge — menu, allergens."],
-  ["Proposal Pete",                       "David",          "Jul 1",    "10 hrs",   "$100K+/yr",  "Efficiency",              "TBD",   "Draft Qwilr proposals from HubSpot."],
-  ["Finance Fiona",                       "David",          "Aug 1",    "8 hrs",    "$30K+/yr",   "Collections",             "TBD",   "Invoice follow-up, PO matching."],
-  // Bagel + Spectrum
-  ["Schmear System Rollout",              "David",          "Ongoing",  "Ongoing",  "Brand / Ops", "Customer Exp.",           "GREEN", "Light/medium/heavy color-coded scoops."],
-  ["CRT Filing Resolution",               "Accountant",     "Active",   "Ongoing",  "$0 — Tax",   "Non-Neg Ops",             "AMBER", "In accountant hands."],
-  ["QB Desktop Access",                   "David",          "Complete", "Done",     "$0",          "Ops",                     "GREEN", "QB Desktop 2024 view-only confirmed."],
-];
-
-const PT_NONNEG = [
-  ["NYU Wagner Contract Rider — Sig.",    "David",          "URGENT",   "30 min",   "$0 — Contract Risk",  "RED",   "Needs signature on return from vacation."],
-  ["Workplace Complaint — Ack.",          "David",          "Mar 28",   "1 hr",     "$0 — HR/Legal Risk",  "RED",   "Document acknowledgment. Protect the company."],
-  ["NYU Past-Due Invoice Confusion",      "David/Jennifer", "Apr 1",    "1 hr",     "$0 — AR Recovery",   "AMBER", "Clarify with NYU client. Jennifer pulls invoice history."],
-  ["Doctor Appointment + Blood Panel",    "David",          "Apr 25",   "2 hrs",    "$0 — Health Baseline","AMBER", "Within 30 days. Full baseline before workout plan."],
-];
 
 let ptCurrentView = 'priority';
+let ptDragId = null;
 
 function ptBadge(s) {
   const m = {RED:'badge-red',AMBER:'badge-amber',GREEN:'badge-green',TBD:'badge-gray'};
-  return `<span class="badge ${m[s]||'badge-gray'}">${s==='TBD'?'⚫ TBD':s==='RED'?'🔴 RED':s==='AMBER'?'🟡 AMBER':'🟢 GREEN'}</span>`;
+  return `<span class="badge ${m[s]||'badge-gray'}">${s==='TBD'?'⚫':s==='RED'?'🔴':s==='AMBER'?'🟡':'🟢'}</span>`;
 }
 
 function ptDollarColor(v) {
@@ -1175,62 +1148,144 @@ function ptDollarColor(v) {
   return 'var(--text-muted)';
 }
 
+function ptCheckbox(id) {
+  return `<td style="text-align:center;"><input type="checkbox" onchange="ptMarkDone(${id})" style="cursor:pointer;width:16px;height:16px;accent-color:var(--green);"></td>`;
+}
+
+function ptDragHandle(id) {
+  return `<td style="cursor:grab;text-align:center;color:var(--text-muted);font-size:14px;" draggable="true" ondragstart="ptDragStart(event,${id})" ondragover="event.preventDefault()" ondrop="ptDrop(event,${id})">⋮⋮</td>`;
+}
+
+async function ptMarkDone(id) {
+  await fetch(SB_URL + '/rest/v1/projects?id=eq.' + id, {
+    method: 'PATCH',
+    headers: {...SB_HDR, 'Prefer':'return=minimal'},
+    body: JSON.stringify({ done: true, done_at: new Date().toISOString() })
+  });
+  loadProjects();
+}
+
+async function ptRestore(id) {
+  await fetch(SB_URL + '/rest/v1/projects?id=eq.' + id, {
+    method: 'PATCH',
+    headers: {...SB_HDR, 'Prefer':'return=minimal'},
+    body: JSON.stringify({ done: false, done_at: null })
+  });
+  loadProjects();
+}
+
+function ptDragStart(e, id) {
+  ptDragId = id;
+  e.dataTransfer.effectAllowed = 'move';
+}
+
+async function ptDrop(e, targetId) {
+  e.preventDefault();
+  if (!ptDragId || ptDragId === targetId) return;
+  var dragItem = ptProjects.find(p => p.id === ptDragId);
+  var targetItem = ptProjects.find(p => p.id === targetId);
+  if (!dragItem || !targetItem) return;
+  var oldOrder = dragItem.sort_order;
+  dragItem.sort_order = targetItem.sort_order;
+  targetItem.sort_order = oldOrder;
+  await Promise.all([
+    fetch(SB_URL + '/rest/v1/projects?id=eq.' + dragItem.id, {
+      method: 'PATCH', headers: {...SB_HDR, 'Prefer':'return=minimal'},
+      body: JSON.stringify({ sort_order: dragItem.sort_order })
+    }),
+    fetch(SB_URL + '/rest/v1/projects?id=eq.' + targetItem.id, {
+      method: 'PATCH', headers: {...SB_HDR, 'Prefer':'return=minimal'},
+      body: JSON.stringify({ sort_order: targetItem.sort_order })
+    })
+  ]);
+  ptDragId = null;
+  loadProjects();
+}
+
 function ptRenderPriority() {
-  document.getElementById('ptTablePriority').innerHTML = PT_PRIORITY.map(([p,o,d,t,v,vt,s,n],i) =>
-    `<tr style="background:${i%2===0?'var(--white)':'var(--off-white)'}">
-      <td><b>${p}</b><div style="font-size:10px;color:var(--text-muted);margin-top:2px;">${vt}</div></td>
-      <td style="color:var(--text-secondary);font-size:12px;">${o}</td>
-      <td style="font-size:12px;white-space:nowrap;">${d}</td>
-      <td style="font-size:12px;color:var(--text-muted);white-space:nowrap;">${t}</td>
-      <td style="font-weight:700;color:${ptDollarColor(v)};font-size:13px;white-space:nowrap;">${v}</td>
-      <td>${ptBadge(s)}</td>
-      <td style="font-size:11px;color:var(--text-secondary);max-width:220px;">${n}</td>
+  var rows = ptProjects.filter(p => p.category === 'priority').sort((a,b) => a.sort_order - b.sort_order);
+  document.getElementById('ptTablePriority').innerHTML = rows.map((r,i) =>
+    `<tr style="background:${i%2===0?'var(--white)':'var(--off-white)'}" ondragover="event.preventDefault()" ondrop="ptDrop(event,${r.id})">
+      ${ptCheckbox(r.id)}
+      ${ptDragHandle(r.id)}
+      <td><b>${r.name}</b><div style="font-size:10px;color:var(--text-muted);margin-top:2px;">${r.value_type||''}</div></td>
+      <td style="color:var(--text-secondary);font-size:12px;">${r.owner||''}</td>
+      <td style="font-size:12px;white-space:nowrap;">${r.due||''}</td>
+      <td style="font-size:12px;color:var(--text-muted);white-space:nowrap;">${r.est_time||''}</td>
+      <td style="font-weight:700;color:${ptDollarColor(r.dollar_value)};font-size:13px;white-space:nowrap;">${r.dollar_value||''}</td>
+      <td>${ptBadge(r.status)}</td>
+      <td style="font-size:11px;color:var(--text-secondary);max-width:220px;">${r.next_action||''}</td>
     </tr>`
   ).join('');
 }
 
 function ptRenderAll() {
-  document.getElementById('ptTableAll').innerHTML = PT_ALL.map(([p,o,d,t,v,vt,s,n],i) =>
+  var rows = ptProjects.filter(p => p.category === 'all' || p.category === 'priority').sort((a,b) => a.sort_order - b.sort_order);
+  document.getElementById('ptTableAll').innerHTML = rows.map((r,i) =>
     `<tr style="background:${i%2===0?'var(--white)':'var(--off-white)'}">
-      <td><b>${p}</b></td>
-      <td style="color:var(--text-secondary);font-size:12px;">${o}</td>
-      <td style="font-size:12px;white-space:nowrap;">${d}</td>
-      <td style="font-size:12px;color:var(--text-muted);white-space:nowrap;">${t}</td>
-      <td style="font-weight:700;color:${ptDollarColor(v)};font-size:13px;white-space:nowrap;">${v}</td>
-      <td style="font-size:11px;color:var(--text-muted);">${vt}</td>
-      <td>${ptBadge(s)}</td>
-      <td style="font-size:11px;color:var(--text-secondary);max-width:200px;">${n}</td>
+      ${ptCheckbox(r.id)}
+      <td><b>${r.name}</b></td>
+      <td style="color:var(--text-secondary);font-size:12px;">${r.owner||''}</td>
+      <td style="font-size:12px;white-space:nowrap;">${r.due||''}</td>
+      <td style="font-size:12px;color:var(--text-muted);white-space:nowrap;">${r.est_time||''}</td>
+      <td style="font-weight:700;color:${ptDollarColor(r.dollar_value)};font-size:13px;white-space:nowrap;">${r.dollar_value||''}</td>
+      <td style="font-size:11px;color:var(--text-muted);">${r.value_type||''}</td>
+      <td>${ptBadge(r.status)}</td>
+      <td style="font-size:11px;color:var(--text-secondary);max-width:200px;">${r.next_action||''}</td>
     </tr>`
   ).join('');
 }
 
 function ptRenderNonNeg() {
-  document.getElementById('ptTableNonNeg').innerHTML = PT_NONNEG.map(([p,o,d,t,v,s,n],i) =>
+  var rows = ptProjects.filter(p => p.category === 'nonneg').sort((a,b) => a.sort_order - b.sort_order);
+  document.getElementById('ptTableNonNeg').innerHTML = rows.map((r,i) =>
     `<tr style="background:${i%2===0?'#fff5f5':'#fff'}">
-      <td><b>${p}</b></td>
-      <td style="color:var(--text-secondary);font-size:12px;">${o}</td>
-      <td style="font-size:12px;font-weight:700;color:${s==='RED'?'var(--red)':'var(--amber)'};white-space:nowrap;">${d}</td>
-      <td style="font-size:12px;color:var(--text-muted);white-space:nowrap;">${t}</td>
-      <td style="font-size:12px;color:var(--text-muted);">${v}</td>
-      <td>${ptBadge(s)}</td>
-      <td style="font-size:11px;color:var(--text-secondary);max-width:220px;">${n}</td>
+      ${ptCheckbox(r.id)}
+      <td><b>${r.name}</b></td>
+      <td style="color:var(--text-secondary);font-size:12px;">${r.owner||''}</td>
+      <td style="font-size:12px;font-weight:700;color:${r.status==='RED'?'var(--red)':'var(--amber)'};white-space:nowrap;">${r.due||''}</td>
+      <td style="font-size:12px;color:var(--text-muted);white-space:nowrap;">${r.est_time||''}</td>
+      <td style="font-size:12px;color:var(--text-muted);">${r.dollar_value||''}</td>
+      <td>${ptBadge(r.status)}</td>
+      <td style="font-size:11px;color:var(--text-secondary);max-width:220px;">${r.next_action||''}</td>
     </tr>`
   ).join('');
 }
 
+function ptRenderDone() {
+  var filterEl = document.getElementById('ptDoneFilter');
+  var since = filterEl.value || new Date(Date.now() - 30*86400000).toISOString().split('T')[0];
+  if (!filterEl.value) filterEl.value = since;
+  var rows = ptDoneProjects.filter(p => p.done_at && p.done_at.split('T')[0] >= since);
+  document.getElementById('ptTableDone').innerHTML = rows.length === 0
+    ? '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">No completed projects in this period</td></tr>'
+    : rows.map((r,i) =>
+    `<tr style="background:${i%2===0?'var(--white)':'var(--off-white)'}">
+      <td style="opacity:0.7;"><b>${r.name}</b></td>
+      <td style="color:var(--text-secondary);font-size:12px;">${r.owner||''}</td>
+      <td style="font-size:12px;color:var(--text-muted);">${r.done_at ? new Date(r.done_at).toLocaleDateString() : '—'}</td>
+      <td>${ptBadge(r.status)}</td>
+      <td><button onclick="ptRestore(${r.id})" style="background:var(--accent-light);color:var(--accent);border:1px solid var(--accent-mid);border-radius:4px;padding:3px 8px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">Restore</button></td>
+    </tr>`
+  ).join('');
+}
+
+function ptFilterDone() { ptRenderDone(); }
+
 function ptSetView(view) {
   ptCurrentView = view;
-  const ptViewIds = {priority:'ptViewPriority', all:'ptViewAll', nonneg:'ptViewNonNeg'};
-  ['priority','all','nonneg'].forEach(v => {
+  const ptViewIds = {priority:'ptViewPriority', all:'ptViewAll', nonneg:'ptViewNonNeg', done:'ptViewDone'};
+  ['priority','all','nonneg','done'].forEach(v => {
     const el = document.getElementById(ptViewIds[v]);
     if (el) el.style.display = v===view ? '' : 'none';
   });
   document.querySelectorAll('.pt-tab-btn').forEach((btn,i) => {
-    const views = ['priority','all','nonneg'];
+    const views = ['priority','all','nonneg','done'];
     const active = views[i] === view;
     btn.style.background = active ? 'var(--accent)' : 'var(--white)';
     btn.style.color = active ? '#fff' : 'var(--text-muted)';
   });
+  if (view === 'done') ptRenderDone();
 }
 
 function cdSetView(view) {
@@ -1249,16 +1304,31 @@ function cdSetView(view) {
 
 async function loadProjects() {
   const statusEl = document.getElementById("projectsStatus");
+  try {
+    var activeUrl = SB_URL + '/rest/v1/projects?done=eq.false&order=sort_order.asc';
+    var doneUrl = SB_URL + '/rest/v1/projects?done=eq.true&order=done_at.desc';
+    var results = await Promise.all([
+      fetch(activeUrl, { headers: SB_HDR }).then(r => r.json()),
+      fetch(doneUrl, { headers: SB_HDR }).then(r => r.json())
+    ]);
+    ptProjects = results[0] || [];
+    ptDoneProjects = results[1] || [];
+  } catch(e) {
+    console.error('loadProjects error:', e);
+    ptProjects = [];
+    ptDoneProjects = [];
+  }
 
-  // Render static data
   ptRenderPriority();
   ptRenderAll();
   ptRenderNonNeg();
-  ptSetView('priority');
+  if (ptCurrentView === 'done') ptRenderDone();
+  ptSetView(ptCurrentView);
 
-  const redCount = PT_ALL.filter(r => r[6]==='RED').length + PT_NONNEG.filter(r => r[5]==='RED').length;
+  var redCount = ptProjects.filter(r => r.status === 'RED').length;
+  var total = ptProjects.length;
   statusEl.className = redCount > 0 ? "badge badge-red" : "badge badge-blue";
-  statusEl.textContent = redCount > 0 ? redCount+" 🔴 · "+PT_ALL.length+" projects" : PT_ALL.length+" projects tracked";
+  statusEl.textContent = redCount > 0 ? redCount + " 🔴 · " + total + " projects" : total + " projects tracked";
 }
 
 // ── BOTS ─────────────────────────────────────────────────────
