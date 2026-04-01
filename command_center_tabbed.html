@@ -1030,12 +1030,11 @@ async function loadHealth() {
     }
 
     return [
-      ["Weight", w+" lbs", wColor, pct, "var(--green)"],
+      ["Weight", w+" lbs → 190 lbs", wColor, pct, "var(--green)"],
       ["BMI", (h.bmi||30.0), "amber", Math.min(100,(h.bmi||30)/35*100), "var(--amber)"],
       ["Sleep (Eight Sleep)", h.sleepScore||"80+", "green", Math.min(100,Number(h.sleepScore)||80), "var(--green)"],
       ["Energy Today", h.energyLevel ? h.energyLevel+"/10" : "—", h.energyLevel ? eColor : "", h.energyLevel ? h.energyLevel*10 : 0, "var(--accent)"],
-      ["Today's Calories", h.todayCals ? h.todayCals+" / 1,800" : "— / 1,800", h.todayCals ? calColor : "", h.todayCals ? Math.min(100,h.todayCals/1800*100) : 0, h.todayCals > 1900 ? "var(--red)" : "var(--green)"],
-      ["Target", "208.8 → 190 lbs", "", 0, "var(--accent)"]
+      ["Today's Calories", h.todayCals ? h.todayCals+" / 1,800" : "— / 1,800", h.todayCals ? calColor : "", h.todayCals ? Math.min(100,h.todayCals/1800*100) : 0, h.todayCals > 1900 ? "var(--red)" : "var(--green)"]
     ].map(([label, val, color, barPct, barColor]) => `
       <div class="health-row">
         <span class="health-metric">${label}</span>
