@@ -1784,7 +1784,7 @@ async function loadWorkoutROI() {
       if (completed === true) {
         doneEl.classList.add("active-green");
         missedEl.classList.add("grayed-out");
-      } else if (completed === false) {
+      } else { 
         missedEl.classList.add("active-red");
         doneEl.classList.add("grayed-out");
       }
