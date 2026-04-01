@@ -33,6 +33,26 @@ body { background:var(--off-white); color:var(--text-primary); font-family:Tahom
 .refresh-btn { background:var(--accent); color:white; border:none; border-radius:6px; padding:7px 14px; font-size:11px; font-weight:700; cursor:pointer; font-family:inherit; display:flex; align-items:center; gap:6px; transition:opacity 0.2s; white-space:nowrap; }
 .refresh-btn:hover { opacity:0.85; }
 .refresh-btn:disabled { opacity:0.5; cursor:not-allowed; }
+.user-menu-wrap { position:relative; }
+.user-menu-btn { background:var(--off-white); border:1px solid var(--border); border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:14px; transition:all 0.15s; }
+.user-menu-btn:hover { background:var(--light-gray); }
+.user-menu-dropdown { position:absolute; top:40px; right:0; background:var(--white); border:1px solid var(--border); border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,0.12); min-width:200px; z-index:2000; display:none; overflow:hidden; }
+.user-menu-dropdown.open { display:block; }
+.user-menu-header { padding:12px 14px; border-bottom:1px solid var(--light-gray); }
+.user-menu-email { font-size:11px; font-weight:700; color:var(--text-primary); }
+.user-menu-role { font-size:10px; color:var(--text-muted); }
+.user-menu-item { display:flex; align-items:center; gap:8px; padding:10px 14px; font-size:12px; color:var(--text-secondary); cursor:pointer; border:none; background:none; width:100%; text-align:left; font-family:inherit; transition:background 0.1s; }
+.user-menu-item:hover { background:var(--off-white); }
+.user-menu-item.danger { color:var(--red); }
+.user-menu-divider { height:1px; background:var(--light-gray); }
+/* Settings modal */
+.settings-overlay { position:fixed; inset:0; z-index:9998; background:rgba(0,0,0,0.4); display:none; align-items:center; justify-content:center; }
+.settings-overlay.open { display:flex; }
+.settings-modal { background:var(--white); border-radius:12px; padding:24px; max-width:400px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,0.15); }
+.settings-input { width:100%; padding:9px 12px; border:1px solid var(--border); border-radius:6px; font-size:13px; font-family:inherit; margin-bottom:10px; box-sizing:border-box; }
+.settings-btn { padding:9px 16px; border-radius:6px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; border:none; }
+.settings-btn-primary { background:var(--accent); color:#fff; }
+.settings-btn-secondary { background:var(--off-white); color:var(--text-secondary); border:1px solid var(--border); }
 .spin { display:inline-block; animation:spin 1s linear infinite; }
 @keyframes spin { to { transform:rotate(360deg); } }
 
@@ -324,6 +344,39 @@ body { background:var(--off-white); color:var(--text-primary); font-family:Tahom
     <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">
       <span id="refreshIcon">↻</span> Refresh
     </button>
+    <div class="user-menu-wrap" id="userMenuWrap" style="display:none;">
+      <button class="user-menu-btn" onclick="toggleUserMenu()" title="Account">👤</button>
+      <div class="user-menu-dropdown" id="userMenuDropdown">
+        <div class="user-menu-header">
+          <div class="user-menu-email" id="userMenuEmail">—</div>
+          <div class="user-menu-role">Admin</div>
+        </div>
+        <button class="user-menu-item" onclick="toggleUserMenu();switchTab('dashboard')">📊 Dashboard</button>
+        <button class="user-menu-item" onclick="toggleUserMenu();openSettings()">⚙️ Settings</button>
+        <div class="user-menu-divider"></div>
+        <button class="user-menu-item danger" onclick="authLogout()">🚪 Sign Out</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="settings-overlay" id="settingsOverlay" onclick="if(event.target===this)closeSettings()">
+  <div class="settings-modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div style="font-size:15px;font-weight:700;">⚙️ Settings</div>
+      <button onclick="closeSettings()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-muted);">✕</button>
+    </div>
+    <div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:12px;">Change Password</div>
+    <input id="settingsCurrentPw" type="password" placeholder="Current password" class="settings-input">
+    <input id="settingsNewPw" type="password" placeholder="New password (min 6 characters)" class="settings-input">
+    <input id="settingsConfirmPw" type="password" placeholder="Confirm new password" class="settings-input">
+    <div id="settingsError" style="font-size:11px;color:var(--red);margin-bottom:10px;display:none;"></div>
+    <div id="settingsSuccess" style="font-size:11px;color:var(--green);margin-bottom:10px;display:none;"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="settings-btn settings-btn-secondary" onclick="closeSettings()">Cancel</button>
+      <button class="settings-btn settings-btn-primary" onclick="changePassword()">Update Password</button>
+    </div>
   </div>
 </div>
 
@@ -989,6 +1042,8 @@ async function authLogin() {
   if (error) { errEl.textContent = error.message; errEl.style.display = 'block'; return; }
   sbUpdateHeaders(data.session);
   document.getElementById('authOverlay').style.display = 'none';
+  document.getElementById('userMenuWrap').style.display = '';
+  document.getElementById('userMenuEmail').textContent = email;
   loadAll();
 }
 
@@ -1013,11 +1068,78 @@ async function authSignup() {
   setTimeout(function() { authLogin(); }, 500);
 }
 
+async function authLogout() {
+  await sbClient.auth.signOut();
+  sbSession = null;
+  SB_HDR = { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY, "Content-Type": "application/json" };
+  document.getElementById('authOverlay').style.display = 'flex';
+  document.getElementById('userMenuWrap').style.display = 'none';
+  document.getElementById('userMenuDropdown').classList.remove('open');
+}
+
+function toggleUserMenu() {
+  document.getElementById('userMenuDropdown').classList.toggle('open');
+}
+
+function openSettings() {
+  document.getElementById('settingsOverlay').classList.add('open');
+  document.getElementById('settingsCurrentPw').value = '';
+  document.getElementById('settingsNewPw').value = '';
+  document.getElementById('settingsConfirmPw').value = '';
+  document.getElementById('settingsError').style.display = 'none';
+  document.getElementById('settingsSuccess').style.display = 'none';
+}
+
+function closeSettings() {
+  document.getElementById('settingsOverlay').classList.remove('open');
+}
+
+async function changePassword() {
+  var errEl = document.getElementById('settingsError');
+  var sucEl = document.getElementById('settingsSuccess');
+  errEl.style.display = 'none';
+  sucEl.style.display = 'none';
+
+  var currentPw = document.getElementById('settingsCurrentPw').value;
+  var newPw = document.getElementById('settingsNewPw').value;
+  var confirmPw = document.getElementById('settingsConfirmPw').value;
+
+  if (!currentPw) { errEl.textContent = 'Enter your current password'; errEl.style.display = 'block'; return; }
+  if (!newPw || newPw.length < 6) { errEl.textContent = 'New password must be at least 6 characters'; errEl.style.display = 'block'; return; }
+  if (newPw !== confirmPw) { errEl.textContent = 'New passwords do not match'; errEl.style.display = 'block'; return; }
+
+  // Verify current password by re-authenticating
+  var email = sbSession ? (await sbClient.auth.getUser()).data.user.email : '';
+  var { error: verifyErr } = await sbClient.auth.signInWithPassword({ email: email, password: currentPw });
+  if (verifyErr) { errEl.textContent = 'Current password is incorrect'; errEl.style.display = 'block'; return; }
+
+  // Update password
+  var { error: updateErr } = await sbClient.auth.updateUser({ password: newPw });
+  if (updateErr) { errEl.textContent = updateErr.message; errEl.style.display = 'block'; return; }
+
+  sucEl.textContent = 'Password updated successfully';
+  sucEl.style.display = 'block';
+  document.getElementById('settingsCurrentPw').value = '';
+  document.getElementById('settingsNewPw').value = '';
+  document.getElementById('settingsConfirmPw').value = '';
+}
+
+// Close user menu when clicking outside
+document.addEventListener('click', function(e) {
+  var wrap = document.getElementById('userMenuWrap');
+  if (wrap && !wrap.contains(e.target)) {
+    document.getElementById('userMenuDropdown').classList.remove('open');
+  }
+});
+
 async function authInit() {
   var { data } = await sbClient.auth.getSession();
   if (data.session) {
     sbUpdateHeaders(data.session);
     document.getElementById('authOverlay').style.display = 'none';
+    document.getElementById('userMenuWrap').style.display = '';
+    var user = (await sbClient.auth.getUser()).data.user;
+    if (user) document.getElementById('userMenuEmail').textContent = user.email;
     loadAll();
   }
   // Listen for token refresh
