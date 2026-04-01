@@ -1622,11 +1622,13 @@ const COMMUTE_KEYWORDS = ['commute','metro-north','grand central','leave 5','tri
 const WORKOUT_KEYWORDS = ['workout','gym','lift','push','pull','legs','cardio','fitbod','tennis','golf','sport','court','match','game','fitness'];
 const WORKOUT_EXCLUDE = ['sandler'];
 const FAMILY_KEYWORDS = ['family','kids','dinner with','bath time','bedtime routine','family time','family dinner','play time','homework'];
-const SKIP_KEYWORDS = ['wake','bedtime','shower','get ready','brush teeth','floss','asleep','no meetings','get home'];
+const SKIP_KEYWORDS = ['wake','bedtime','shower','get ready','brush teeth','floss','asleep','no meetings','get home & shower'];
+const PERSONAL_KEYWORDS = ['free time','personal time','personal'];
 
 function tiClassifyEvent(subject) {
   var s = subject.toLowerCase();
   if (SKIP_KEYWORDS.some(function(k){ return s.includes(k); })) return null;
+  if (PERSONAL_KEYWORDS.some(function(k){ return s.includes(k); })) return 'personal';
   if (WORKOUT_KEYWORDS.some(function(k){ return s.includes(k); }) && !WORKOUT_EXCLUDE.some(function(k){ return s.includes(k); })) return 'workout';
   if (FAMILY_KEYWORDS.some(function(k){ return s.includes(k); })) return 'family';
   if (COMMUTE_KEYWORDS.some(function(k){ return s.includes(k); })) return 'commute';
