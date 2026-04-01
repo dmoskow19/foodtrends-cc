@@ -426,7 +426,7 @@ body { background:var(--off-white); color:var(--text-primary); font-family:Tahom
             <div class="ti-stat-sub" id="tiTodaySub">Loading…</div>
           </div>
           <div class="ti-stat">
-            <div class="ti-stat-label">Free Rest of Week</div>
+            <div class="ti-stat-label">Free Work Hrs Rest of Week</div>
             <div class="ti-stat-val" id="tiWeekFree">—</div>
             <div class="ti-stat-sub" id="tiWeekSub">Loading…</div>
           </div>
@@ -1825,8 +1825,10 @@ async function tiRender() {
       }
     }
 
-    // Free blocks remaining (today onward)
-    if (dateKey >= todayStr) {
+    // Free work hours remaining (today onward, Mon-Fri only)
+    var keyDate = new Date(dateKey + 'T12:00:00');
+    var dayOfWeek = keyDate.getDay(); // 0=Sun, 6=Sat
+    if (dateKey >= todayStr && dayOfWeek >= 1 && dayOfWeek <= 5) {
       var freeB = computeFreeBlocks(dayEvts, WORK_START, WORK_END);
       freeB.forEach(function(b){
         var freeStart = b.startH, freeEnd = b.endH;
@@ -1853,7 +1855,7 @@ async function tiRender() {
   document.getElementById('tiTodaySub').textContent = todayMtgs + ' meeting' + (todayMtgs !== 1 ? 's' : '') + ' today';
 
   document.getElementById('tiWeekFree').textContent = weekFreeRemaining + ' hrs';
-  document.getElementById('tiWeekSub').textContent = 'remaining this week';
+  document.getElementById('tiWeekSub').textContent = 'Mon–Fri remaining';
   document.getElementById('tiWeekMtg').textContent = weekMeetings;
   document.getElementById('tiMtgSub').textContent = 'Mon–Sun total';
 
