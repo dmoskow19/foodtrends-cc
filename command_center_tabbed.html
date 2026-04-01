@@ -238,8 +238,11 @@ body { background:var(--off-white); color:var(--text-primary); font-family:Tahom
 .ti-load-vacation { background:#fffbeb; color:#d97706; }
 
 /* ── WORKOUT ROI ── */
-.roi-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:12px; }
-.roi-card { background:var(--off-white); border:1px solid var(--border); border-radius:8px; padding:12px; text-align:center; }
+.roi-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:12px; }
+.roi-card { background:var(--off-white); border:1px solid var(--border); border-radius:8px; padding:12px; text-align:center; transition:all 0.3s; }
+.roi-card.active-green { background:#dcfce7; border-color:#16a34a; }
+.roi-card.active-red { background:#fee2e2; border-color:#dc2626; }
+.roi-card.grayed-out { opacity:0.35; }
 .roi-val { font-size:16px; font-weight:700; }
 .roi-lbl { font-size:10px; color:var(--text-muted); text-transform:uppercase; margin-top:2px; }
 
@@ -458,22 +461,18 @@ body { background:var(--off-white); color:var(--text-primary); font-family:Tahom
   <div style="margin-bottom:16px;">
     <div class="card">
       <div class="card-header">
-        <span class="card-title">💪 Workout ROI — Daily Impact at $14,300/Day Capacity</span>
+        <span class="card-title">💪 Workout ROI — Today's Impact</span>
         <span class="badge badge-green">Formula Active</span>
       </div>
       <div class="card-body">
         <div class="roi-grid">
-          <div class="roi-card">
-            <div class="roi-val" style="color:var(--green)">$14,300</div>
-            <div class="roi-lbl">Daily Capacity Value</div>
-          </div>
-          <div class="roi-card">
+          <div class="roi-card" id="roi-missed-card-1">
             <div class="roi-val" style="color:var(--red)">-$5,005</div>
             <div class="roi-lbl">Missed Workout Cost</div>
           </div>
-          <div class="roi-card">
+          <div class="roi-card" id="roi-completed-card-1">
             <div class="roi-val" style="color:var(--green)">+$5,005</div>
-            <div class="roi-lbl">Completed = Captured</div>
+            <div class="roi-lbl">Completed Workout Gain</div>
           </div>
         </div>
         <div style="font-size:11px;color:var(--text-muted);padding-top:8px;border-top:1px solid var(--light-gray);">
@@ -699,9 +698,8 @@ body { background:var(--off-white); color:var(--text-primary); font-family:Tahom
       </div>
       <div class="card-body">
         <div class="roi-grid" style="margin-bottom:12px;">
-          <div class="roi-card"><div class="roi-val" style="color:var(--green)">$14,300</div><div class="roi-lbl">Daily Capacity Value</div></div>
-          <div class="roi-card"><div class="roi-val" style="color:var(--red)">-$5,005</div><div class="roi-lbl">Missed Workout Cost</div></div>
-          <div class="roi-card"><div class="roi-val" style="color:var(--green)">+$5,005</div><div class="roi-lbl">Completed = Captured</div></div>
+          <div class="roi-card" id="roi-missed-card-2"><div class="roi-val" style="color:var(--red)">-$5,005</div><div class="roi-lbl">Missed Workout Cost</div></div>
+          <div class="roi-card" id="roi-completed-card-2"><div class="roi-val" style="color:var(--green)">+$5,005</div><div class="roi-lbl">Completed Workout Gain</div></div>
         </div>
         <div style="font-size:11px;color:var(--text-muted);padding:8px 0;border-top:1px solid var(--light-gray);">
           Revenue influence: ~$4.5M (35% gap at 60% vs 95% capacity = $6,300/day) + $8,000/day salary value = $14,300 total capacity
@@ -1764,6 +1762,38 @@ function tiRender() {
 }
 
 // ── INIT ─────────────────────────────────────────────────────
+async function loadWorkoutROI() {
+  try {
+    const today = new Date().toISOString().slice(0,10);
+    const rows = await sbFetch("daily_log", {
+      select: "workout_completed",
+      date: "eq." + today,
+      limit: 1
+    });
+    const completed = rows && rows.length > 0 ? rows[0].workout_completed : null;
+    const ids = [
+      { missed: "roi-missed-card-1", done: "roi-completed-card-1" },
+      { missed: "roi-missed-card-2", done: "roi-completed-card-2" }
+    ];
+    ids.forEach(({ missed, done }) => {
+      const missedEl = document.getElementById(missed);
+      const doneEl = document.getElementById(done);
+      if (!missedEl || !doneEl) return;
+      missedEl.className = "roi-card";
+      doneEl.className = "roi-card";
+      if (completed === true) {
+        doneEl.classList.add("active-green");
+        missedEl.classList.add("grayed-out");
+      } else if (completed === false) {
+        missedEl.classList.add("active-red");
+        doneEl.classList.add("grayed-out");
+      }
+    });
+  } catch(e) {
+    console.warn("loadWorkoutROI error:", e);
+  }
+}
+
 async function loadAll() {
   const btn = document.getElementById("refreshBtn");
   const icon = document.getElementById("refreshIcon");
@@ -1777,7 +1807,7 @@ async function loadAll() {
   const start = Date.now();
   try {
     await tiRender();
-    await Promise.allSettled([loadInbox(), loadHealth(), loadProjects(), loadBots(), loadNutrition()]);
+    await Promise.allSettled([loadInbox(), loadHealth(), loadProjects(), loadBots(), loadNutrition(), loadWorkoutROI()]);
   } finally {
     btn.disabled = false;
     icon.className = "";
