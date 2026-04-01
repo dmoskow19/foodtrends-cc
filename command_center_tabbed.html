@@ -231,6 +231,13 @@ body { background:var(--off-white); color:var(--text-primary); font-family:Tahom
 .ti-day-nav-btn:hover { background:var(--off-white); color:var(--text-secondary); }
 .ti-day-nav-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
 .ti-day-nav-btn.today-marker { box-shadow:0 0 0 2px var(--accent-mid); }
+.ti-week-table th { font-size:10px; }
+.ti-week-table td { font-size:12px; }
+.ti-week-table .ti-cat-cell { display:flex; align-items:center; gap:6px; }
+.ti-week-table .ti-cat-dot { width:8px; height:8px; border-radius:2px; flex-shrink:0; }
+.ti-week-table .ti-val-cell { text-align:right; font-weight:700; font-size:12px; }
+.ti-week-table .ti-total-cell { text-align:right; font-weight:700; font-size:13px; }
+.ti-week-table .ti-sub { font-size:10px; font-weight:400; color:var(--text-muted); display:block; }
 .ti-evt-block { display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; background:var(--off-white); border:1px solid var(--border); }
 .ti-evt-block.workout-missed { opacity:0.45; }
 .ti-evt-block.workout-missed .ti-evt-name { text-decoration:line-through; }
@@ -431,14 +438,14 @@ body { background:var(--off-white); color:var(--text-primary); font-family:Tahom
             <div class="ti-stat-sub" id="tiTodaySub">Loading…</div>
           </div>
           <div class="ti-stat">
-            <div class="ti-stat-label">Free Work Hrs Rest of Week</div>
-            <div class="ti-stat-val" id="tiWeekFree">—</div>
-            <div class="ti-stat-sub" id="tiWeekSub">Loading…</div>
-          </div>
-          <div class="ti-stat">
             <div class="ti-stat-label">Meetings This Week</div>
             <div class="ti-stat-val" id="tiWeekMtg">—</div>
             <div class="ti-stat-sub" id="tiMtgSub">Mon–Sun</div>
+          </div>
+          <div class="ti-stat">
+            <div class="ti-stat-label">Workouts This Week</div>
+            <div class="ti-stat-val" id="tiWeekWorkout">—</div>
+            <div class="ti-stat-sub" id="tiWorkoutSub">Loading…</div>
           </div>
         </div>
         <!-- Day View -->
@@ -452,7 +459,19 @@ body { background:var(--off-white); color:var(--text-primary); font-family:Tahom
         <!-- Week View -->
         <div id="tiWeekView" style="display:none;">
           <div style="font-size:11px;font-weight:700;color:var(--text-secondary);margin-bottom:10px;">Week Summary (Mon–Sun)</div>
-          <div class="ti-week-summary" id="tiWeekSummary"></div>
+          <div class="data-table-wrap">
+            <table class="data-table ti-week-table" id="tiWeekTable">
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th style="text-align:right;">So Far</th>
+                  <th style="text-align:right;">Projected</th>
+                  <th style="text-align:right;">Total</th>
+                </tr>
+              </thead>
+              <tbody id="tiWeekTableBody"></tbody>
+            </table>
+          </div>
         </div>
         <!-- Legend with totals (dynamic per selected day) -->
         <div class="ti-legend" id="tiLegend"></div>
@@ -1821,7 +1840,7 @@ async function tiRender() {
   todayFreeHrs = Math.round(todayFreeHrs * 10) / 10;
 
   // Week aggregations
-  var weekMeetings = 0, weekFreeRemaining = 0, weekVacDays = 0;
+  var weekMeetings = 0;
   var weekWorkoutsDone = 0;
   var workoutROI = 0;
   var WORKOUT_TARGET = 4;
@@ -1831,25 +1850,18 @@ async function tiRender() {
     var dayEvts = byDate[dateKey];
     var dayDL = dlMap[dateKey] || {};
 
-    // Count meetings
     dayEvts.forEach(function(ev) {
       if (ev.type === 'meeting') weekMeetings++;
     });
 
-    // Vacation days
-    if (dayDL.vacation_mode === true) weekVacDays++;
-
-    // Workout tracking
     var workoutEvts = dayEvts.filter(function(ev){ return ev.type === 'workout'; });
     if (workoutEvts.length > 0) {
       if (dayDL.workout_completed === true) {
         weekWorkoutsDone++;
         workoutROI += ROI_PER_DAY;
       } else if (dateKey < todayStr) {
-        // Past day, missed
         workoutROI -= ROI_PER_DAY;
       } else if (dateKey === todayStr) {
-        // Today: check if the workout event time has already passed
         var latestWorkoutEnd = Math.max.apply(null, workoutEvts.map(function(ev){ return ev.endH; }));
         var currentH = nowET.getHours() + nowET.getMinutes()/60;
         if (currentH > latestWorkoutEnd) {
@@ -1857,24 +1869,7 @@ async function tiRender() {
         }
       }
     }
-
-    // Free work hours remaining (today onward, Mon-Fri only)
-    var keyDate = new Date(dateKey + 'T12:00:00');
-    var dayOfWeek = keyDate.getDay(); // 0=Sun, 6=Sat
-    if (dateKey >= todayStr && dayOfWeek >= 1 && dayOfWeek <= 5) {
-      var freeB = computeFreeBlocks(dayEvts, WORK_START, WORK_END);
-      freeB.forEach(function(b){
-        if (b.type !== 'free_work') return; // only count free working time
-        var freeStart = b.startH, freeEnd = b.endH;
-        if (dateKey === todayStr) {
-          var nowH = nowET.getHours() + nowET.getMinutes()/60;
-          freeStart = Math.max(freeStart, nowH);
-        }
-        if (freeEnd > freeStart) weekFreeRemaining += (freeEnd - freeStart);
-      });
-    }
   });
-  weekFreeRemaining = Math.round(weekFreeRemaining * 10) / 10;
 
   // Update KPI stats
   var todayEl = document.getElementById('tiTodayFree');
@@ -1888,10 +1883,14 @@ async function tiRender() {
   var todayMtgs = todayEvents.filter(function(e){ return e.type==='meeting'; }).length;
   document.getElementById('tiTodaySub').textContent = todayMtgs + ' meeting' + (todayMtgs !== 1 ? 's' : '') + ' today';
 
-  document.getElementById('tiWeekFree').textContent = weekFreeRemaining + ' hrs';
-  document.getElementById('tiWeekSub').textContent = 'Mon–Fri remaining';
   document.getElementById('tiWeekMtg').textContent = weekMeetings;
   document.getElementById('tiMtgSub').textContent = 'Mon–Sun total';
+
+  var roiColor = workoutROI >= 0 ? 'var(--green)' : 'var(--red)';
+  var roiStr = (workoutROI > 0 ? '+$' : workoutROI < 0 ? '-$' : '$') + Math.abs(workoutROI).toLocaleString();
+  document.getElementById('tiWeekWorkout').textContent = weekWorkoutsDone + ' of ' + WORKOUT_TARGET;
+  document.getElementById('tiWeekWorkout').style.color = weekWorkoutsDone >= WORKOUT_TARGET ? 'var(--green)' : 'var(--red)';
+  document.getElementById('tiWorkoutSub').innerHTML = 'ROI: <span style="color:' + roiColor + ';font-weight:700;">' + roiStr + '</span>';
 
   // Badge
   var badge = document.getElementById('tiLoadBadge');
@@ -1927,7 +1926,7 @@ async function tiRender() {
   tiRenderDay(tiWeekCache, tiSelectedDate || todayStr);
 
   // Render week summary
-  tiRenderWeekSummary(weekMeetings, weekFreeRemaining, weekWorkoutsDone, WORKOUT_TARGET, workoutROI, weekVacDays);
+  tiRenderWeekSummary(tiWeekCache, weekWorkoutsDone, WORKOUT_TARGET, workoutROI);
 }
 
 function tiRenderDay(cache, dateStr) {
@@ -2060,16 +2059,97 @@ function tiRenderDay(cache, dateStr) {
 }
 
 // tiRender continued — Week View Summary (called after tiRenderDay returns)
-function tiRenderWeekSummary(weekMeetings, weekFreeRemaining, weekWorkoutsDone, WORKOUT_TARGET, workoutROI, weekVacDays) {
-  var wsEl = document.getElementById('tiWeekSummary');
-  var roiColor = workoutROI >= 0 ? 'var(--green)' : 'var(--red)';
-  var roiStr = (workoutROI > 0 ? '+$' : workoutROI < 0 ? '-$' : '$') + Math.abs(workoutROI).toLocaleString();
-  wsEl.innerHTML =
-    '<div class="ti-ws-card"><div class="ti-ws-val" style="color:var(--accent);">' + weekMeetings + '</div><div class="ti-ws-lbl">Meetings</div></div>' +
-    '<div class="ti-ws-card"><div class="ti-ws-val" style="color:var(--green);">' + weekFreeRemaining + 'h</div><div class="ti-ws-lbl">Free Remaining</div></div>' +
-    '<div class="ti-ws-card"><div class="ti-ws-val" style="color:var(--red);">' + weekWorkoutsDone + ' of ' + WORKOUT_TARGET + '</div><div class="ti-ws-lbl">Workouts</div></div>' +
-    '<div class="ti-ws-card"><div class="ti-ws-val" style="color:' + roiColor + ';">' + roiStr + '</div><div class="ti-ws-lbl">Workout ROI</div></div>' +
-    '<div class="ti-ws-card"><div class="ti-ws-val" style="color:#d97706;">' + weekVacDays + '</div><div class="ti-ws-lbl">Vacation Days</div></div>';
+function tiRenderWeekSummary(cache, weekWorkoutsDone, WORKOUT_TARGET, workoutROI) {
+  var byDate = cache.byDate, dlMap = cache.dlMap, nowET = cache.nowET, todayStr = cache.todayStr;
+  var WORK_START = 5, WORK_END = 21;
+  var nowH = nowET.getHours() + nowET.getMinutes()/60;
+
+  var categories = [
+    { key:'free_work', label:'Free Work', color:'#93c5fd' },
+    { key:'meeting', label:'Meeting', color:'#7c3aed' },
+    { key:'workout', label:'Workout', color:'#dc2626' },
+    { key:'personal', label:'Personal', color:'#16a34a' },
+    { key:'family', label:'Family', color:'#eab308' },
+    { key:'commute', label:'Commute', color:'#2563eb' },
+    { key:'vacation', label:'Vacation', color:'#d97706' }
+  ];
+
+  // Aggregate so-far and projected hours + meeting counts per category
+  var soFar = {}, projected = {};
+  var mtgCountSoFar = 0, mtgCountProjected = 0;
+  categories.forEach(function(c) { soFar[c.key] = 0; projected[c.key] = 0; });
+
+  Object.keys(byDate).forEach(function(dateKey) {
+    var dayEvts = byDate[dateKey];
+    var freeBlocks = computeFreeBlocks(dayEvts, WORK_START, WORK_END);
+    var allBlocks = dayEvts.concat(freeBlocks);
+
+    allBlocks.forEach(function(ev) {
+      var hrs = ev.endH - ev.startH;
+      if (hrs <= 0) return;
+      var type = ev.type;
+      if (!soFar.hasOwnProperty(type)) return;
+
+      if (dateKey < todayStr) {
+        // Past day — all goes to so-far
+        soFar[type] += hrs;
+        if (type === 'meeting') mtgCountSoFar++;
+      } else if (dateKey === todayStr) {
+        // Today — split at current time
+        var evStart = ev.startH, evEnd = ev.endH;
+        var pastPart = Math.min(evEnd, nowH) - evStart;
+        var futurePart = evEnd - Math.max(evStart, nowH);
+        if (pastPart > 0) {
+          soFar[type] += pastPart;
+          if (type === 'meeting' && pastPart > 0) mtgCountSoFar++;
+        }
+        if (futurePart > 0) {
+          projected[type] += futurePart;
+          if (type === 'meeting' && futurePart > 0 && pastPart <= 0) mtgCountProjected++;
+        }
+      } else {
+        // Future day — all goes to projected
+        projected[type] += hrs;
+        if (type === 'meeting') mtgCountProjected++;
+      }
+    });
+  });
+
+  function fmtHrs(h) {
+    h = Math.round(h * 10) / 10;
+    if (h === 0) return '—';
+    return h >= 1 ? h + 'h' : Math.round(h * 60) + 'm';
+  }
+
+  var tbody = document.getElementById('tiWeekTableBody');
+  tbody.innerHTML = categories.map(function(cat) {
+    var sf = soFar[cat.key];
+    var pj = projected[cat.key];
+    var total = sf + pj;
+
+    // Extra info for meeting row
+    var sfExtra = '', pjExtra = '', totExtra = '';
+    if (cat.key === 'meeting') {
+      var totalMtgs = mtgCountSoFar + mtgCountProjected;
+      sfExtra = mtgCountSoFar > 0 ? '<span class="ti-sub">' + mtgCountSoFar + ' mtg' + (mtgCountSoFar !== 1 ? 's' : '') + '</span>' : '';
+      pjExtra = mtgCountProjected > 0 ? '<span class="ti-sub">' + mtgCountProjected + ' mtg' + (mtgCountProjected !== 1 ? 's' : '') + '</span>' : '';
+      totExtra = '<span class="ti-sub">' + totalMtgs + ' mtg' + (totalMtgs !== 1 ? 's' : '') + '</span>';
+    }
+
+    // Extra info for workout row
+    if (cat.key === 'workout') {
+      var roiColor2 = workoutROI >= 0 ? 'var(--green)' : 'var(--red)';
+      var roiStr2 = (workoutROI > 0 ? '+$' : workoutROI < 0 ? '-$' : '$') + Math.abs(workoutROI).toLocaleString();
+      totExtra = '<span class="ti-sub">' + weekWorkoutsDone + '/' + WORKOUT_TARGET + ' done · <span style="color:' + roiColor2 + ';">' + roiStr2 + '</span></span>';
+    }
+
+    return '<tr>' +
+      '<td><div class="ti-cat-cell"><div class="ti-cat-dot" style="background:' + cat.color + '"></div>' + cat.label + '</div></td>' +
+      '<td class="ti-val-cell" style="color:' + cat.color + ';">' + fmtHrs(sf) + sfExtra + '</td>' +
+      '<td class="ti-val-cell" style="color:' + cat.color + ';opacity:0.6;">' + fmtHrs(pj) + pjExtra + '</td>' +
+      '<td class="ti-total-cell" style="color:' + cat.color + ';">' + fmtHrs(total) + totExtra + '</td>' +
+    '</tr>';
+  }).join('');
 }
 
 // ── INIT ─────────────────────────────────────────────────────
