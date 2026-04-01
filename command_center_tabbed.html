@@ -426,7 +426,7 @@ body { background:var(--off-white); color:var(--text-primary); font-family:Tahom
         <!-- KPI row -->
         <div class="ti-grid">
           <div class="ti-stat">
-            <div class="ti-stat-label">Free Today</div>
+            <div class="ti-stat-label">Free Work Time Today</div>
             <div class="ti-stat-val" id="tiTodayFree">—</div>
             <div class="ti-stat-sub" id="tiTodaySub">Loading…</div>
           </div>
@@ -454,16 +454,8 @@ body { background:var(--off-white); color:var(--text-primary); font-family:Tahom
           <div style="font-size:11px;font-weight:700;color:var(--text-secondary);margin-bottom:10px;">Week Summary (Mon–Sun)</div>
           <div class="ti-week-summary" id="tiWeekSummary"></div>
         </div>
-        <!-- Legend -->
-        <div class="ti-legend">
-          <div class="ti-legend-item"><div class="ti-legend-dot" style="background:#16a34a"></div>Personal</div>
-          <div class="ti-legend-item"><div class="ti-legend-dot" style="background:#93c5fd"></div>Free Work</div>
-          <div class="ti-legend-item"><div class="ti-legend-dot" style="background:#7c3aed"></div>Meeting</div>
-          <div class="ti-legend-item"><div class="ti-legend-dot" style="background:#d97706"></div>Vacation</div>
-          <div class="ti-legend-item"><div class="ti-legend-dot" style="background:#2563eb"></div>Commute</div>
-          <div class="ti-legend-item"><div class="ti-legend-dot" style="background:#dc2626"></div>Workout</div>
-          <div class="ti-legend-item"><div class="ti-legend-dot" style="background:#eab308"></div>Family</div>
-        </div>
+        <!-- Legend with totals (dynamic per selected day) -->
+        <div class="ti-legend" id="tiLegend"></div>
       </div>
     </div>
   </div>
@@ -1891,7 +1883,7 @@ async function tiRender() {
     todayEl.style.color = '#d97706';
   } else {
     todayEl.textContent = todayFreeHrs + ' hrs';
-    todayEl.style.color = todayFreeHrs >= 6 ? 'var(--green)' : todayFreeHrs >= 3 ? 'var(--amber)' : 'var(--text-muted)';
+    todayEl.style.color = '#60a5fa';
   }
   var todayMtgs = todayEvents.filter(function(e){ return e.type==='meeting'; }).length;
   document.getElementById('tiTodaySub').textContent = todayMtgs + ' meeting' + (todayMtgs !== 1 ? 's' : '') + ' today';
@@ -2030,6 +2022,40 @@ function tiRenderDay(cache, dateStr) {
       '<div style="flex:1;"><div class="ti-evt-name" style="font-size:12px;font-weight:700;color:var(--text-primary);">' + ev.subject + labelSuffix + '</div>' +
       '<div style="font-size:10px;color:var(--text-muted);">' + startStr + ' – ' + endStr + ' · ' + typeLabel + '</div></div>' +
       '<div style="font-size:11px;font-weight:700;color:var(--text-muted);flex-shrink:0;">' + durStr + '</div></div>';
+  }).join('');
+
+  // Legend with totals per type for selected day
+  var typeTotals = {};
+  allBlocks.forEach(function(ev) {
+    if (!typeTotals[ev.type]) typeTotals[ev.type] = 0;
+    typeTotals[ev.type] += (ev.endH - ev.startH);
+  });
+  // Also count explicit personal/free_work events from calendar (not just computed gaps)
+  dayEvents.forEach(function(ev) {
+    if (ev.type === 'personal') {
+      if (!typeTotals['personal']) typeTotals['personal'] = 0;
+      typeTotals['personal'] += (ev.endH - ev.startH);
+    }
+  });
+
+  var legendOrder = [
+    { key:'free_work', label:'Free Work', color:'#93c5fd' },
+    { key:'meeting', label:'Meeting', color:'#7c3aed' },
+    { key:'workout', label:'Workout', color:'#dc2626' },
+    { key:'personal', label:'Personal', color:'#16a34a' },
+    { key:'family', label:'Family', color:'#eab308' },
+    { key:'commute', label:'Commute', color:'#2563eb' },
+    { key:'vacation', label:'Vacation', color:'#d97706' }
+  ];
+
+  var legendEl = document.getElementById('tiLegend');
+  legendEl.innerHTML = legendOrder.map(function(item) {
+    var hrs = typeTotals[item.key] || 0;
+    hrs = Math.round(hrs * 10) / 10;
+    var hrsStr = hrs >= 1 ? hrs + 'h' : (hrs > 0 ? Math.round(hrs * 60) + 'm' : '—');
+    return '<div class="ti-legend-item">' +
+      '<div class="ti-legend-dot" style="background:' + item.color + '"></div>' +
+      item.label + ' <span style="font-weight:700;color:' + item.color + ';">' + hrsStr + '</span></div>';
   }).join('');
 }
 
