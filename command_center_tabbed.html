@@ -246,6 +246,15 @@ body { background:var(--off-white); color:var(--text-primary); font-family:"Open
 .ti-load-moderate { background:var(--amber-light); color:var(--amber); }
 .ti-load-heavy { background:var(--red-light); color:var(--red); }
 .ti-load-vacation { background:#fffbeb; color:#d97706; }
+.pt-drag-cell { cursor:grab; text-align:center; color:var(--text-muted); font-size:14px; user-select:none; }
+.pt-drag-cell:active { cursor:grabbing; }
+tr.pt-dragging { opacity:0.4; }
+tr.pt-drop-above { box-shadow:0 -2px 0 0 var(--accent) inset; }
+tr.pt-drop-below { box-shadow:0 2px 0 0 var(--accent) inset; }
+tr.pt-drop-above td:first-child { position:relative; }
+tr.pt-drop-above td:first-child::before { content:''; position:absolute; top:-1px; left:0; right:0; height:2px; background:var(--accent); border-radius:1px; }
+tr.pt-drop-below td:first-child { position:relative; }
+tr.pt-drop-below td:first-child::before { content:''; position:absolute; bottom:-1px; left:0; right:0; height:2px; background:var(--accent); border-radius:1px; }
 .ti-day-nav { display:flex; gap:4px; margin-bottom:10px; }
 .ti-day-nav-btn { padding:5px 10px; font-size:10px; font-weight:700; cursor:pointer; border:1px solid var(--border); background:var(--white); color:var(--text-muted); border-radius:6px; font-family:inherit; transition:all 0.15s; }
 .ti-day-nav-btn:hover { background:var(--off-white); color:var(--text-secondary); }
@@ -1364,7 +1373,7 @@ function ptCheckbox(id) {
 }
 
 function ptDragHandle(id) {
-  return `<td style="cursor:grab;text-align:center;color:var(--text-muted);font-size:14px;" draggable="true" ondragstart="ptDragStart(event,${id})" ondragover="event.preventDefault()" ondrop="ptDrop(event,${id})">⋮⋮</td>`;
+  return `<td class="pt-drag-cell" draggable="true" ondragstart="ptDragStart(event,${id})">⋮⋮</td>`;
 }
 
 const PT_FN_URL = SB_URL + '/functions/v1/project-actions';
@@ -1384,31 +1393,99 @@ async function ptRestore(id) { ptAction({ action: 'restore', id: id }); }
 function ptDragStart(e, id) {
   ptDragId = id;
   e.dataTransfer.effectAllowed = 'move';
+  // Mark the dragged row
+  var row = e.target.closest('tr');
+  if (row) setTimeout(function(){ row.classList.add('pt-dragging'); }, 0);
+}
+
+function ptDragOver(e, targetId) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  if (!ptDragId || ptDragId === targetId) return;
+  // Clear all drop indicators
+  document.querySelectorAll('.pt-drop-above,.pt-drop-below').forEach(function(el){
+    el.classList.remove('pt-drop-above','pt-drop-below');
+  });
+  // Determine if dropping above or below based on mouse position
+  var row = e.target.closest('tr');
+  if (!row) return;
+  var rect = row.getBoundingClientRect();
+  var midY = rect.top + rect.height / 2;
+  if (e.clientY < midY) {
+    row.classList.add('pt-drop-above');
+  } else {
+    row.classList.add('pt-drop-below');
+  }
+}
+
+function ptDragLeave(e) {
+  var row = e.target.closest('tr');
+  if (row) {
+    row.classList.remove('pt-drop-above','pt-drop-below');
+  }
+}
+
+function ptDragEnd() {
+  ptDragId = null;
+  document.querySelectorAll('.pt-dragging,.pt-drop-above,.pt-drop-below').forEach(function(el){
+    el.classList.remove('pt-dragging','pt-drop-above','pt-drop-below');
+  });
 }
 
 async function ptDrop(e, targetId) {
   e.preventDefault();
-  if (!ptDragId || ptDragId === targetId) return;
-  var dragItem = ptProjects.find(p => p.id === ptDragId);
-  var targetItem = ptProjects.find(p => p.id === targetId);
-  if (!dragItem || !targetItem) return;
-  var oldOrder = dragItem.sort_order;
-  dragItem.sort_order = targetItem.sort_order;
-  targetItem.sort_order = oldOrder;
-  await Promise.all([
-    fetch(PT_FN_URL, { method:'POST', headers:{'Content-Type':'application/json','Authorization':SB_HDR['Authorization'],'apikey':SB_KEY},
-      body: JSON.stringify({ action:'reorder', id:dragItem.id, sort_order:dragItem.sort_order }) }),
-    fetch(PT_FN_URL, { method:'POST', headers:{'Content-Type':'application/json','Authorization':SB_HDR['Authorization'],'apikey':SB_KEY},
-      body: JSON.stringify({ action:'reorder', id:targetItem.id, sort_order:targetItem.sort_order }) })
-  ]);
+  // Clean up visual state
+  document.querySelectorAll('.pt-dragging,.pt-drop-above,.pt-drop-below').forEach(function(el){
+    el.classList.remove('pt-dragging','pt-drop-above','pt-drop-below');
+  });
+  if (!ptDragId || ptDragId === targetId) { ptDragId = null; return; }
+
+  // Determine insert position (above or below target)
+  var row = e.target.closest('tr');
+  var insertAbove = true;
+  if (row) {
+    var rect = row.getBoundingClientRect();
+    insertAbove = e.clientY < (rect.top + rect.height / 2);
+  }
+
+  // Get priority projects in order
+  var cat = ptProjects.find(p => p.id === ptDragId)?.category || 'priority';
+  var ordered = ptProjects.filter(p => p.category === cat).sort((a,b) => a.sort_order - b.sort_order);
+
+  // Remove dragged item
+  var dragIdx = ordered.findIndex(p => p.id === ptDragId);
+  var dragItem = ordered.splice(dragIdx, 1)[0];
+
+  // Find target position
+  var targetIdx = ordered.findIndex(p => p.id === targetId);
+  if (!insertAbove) targetIdx++;
+
+  // Insert at new position
+  ordered.splice(targetIdx, 0, dragItem);
+
+  // Reassign sort_order
+  var updates = [];
+  ordered.forEach(function(p, i) {
+    if (p.sort_order !== i + 1) {
+      p.sort_order = i + 1;
+      updates.push(fetch(PT_FN_URL, {
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':SB_HDR['Authorization'],'apikey':SB_KEY},
+        body: JSON.stringify({ action:'reorder', id:p.id, sort_order:p.sort_order })
+      }));
+    }
+  });
+
   ptDragId = null;
-  loadProjects();
+  // Re-render immediately for responsiveness, then persist
+  ptRenderPriority();
+  if (updates.length > 0) await Promise.all(updates);
 }
 
 function ptRenderPriority() {
   var rows = ptProjects.filter(p => p.category === 'priority').sort((a,b) => a.sort_order - b.sort_order);
   document.getElementById('ptTablePriority').innerHTML = rows.map((r,i) =>
-    `<tr style="background:${i%2===0?'var(--white)':'var(--off-white)'}" ondragover="event.preventDefault()" ondrop="ptDrop(event,${r.id})">
+    `<tr style="background:${i%2===0?'var(--white)':'var(--off-white)'}" ondragover="ptDragOver(event,${r.id})" ondragleave="ptDragLeave(event)" ondrop="ptDrop(event,${r.id})" ondragend="ptDragEnd()">
       ${ptCheckbox(r.id)}
       ${ptDragHandle(r.id)}
       <td><b>${r.name}</b><div style="font-size:10px;color:var(--text-muted);margin-top:2px;">${r.value_type||''}</div></td>
