@@ -246,15 +246,16 @@ body { background:var(--off-white); color:var(--text-primary); font-family:"Open
 .ti-load-moderate { background:var(--amber-light); color:var(--amber); }
 .ti-load-heavy { background:var(--red-light); color:var(--red); }
 .ti-load-vacation { background:#fffbeb; color:#d97706; }
+th.pt-sortable { cursor:pointer; user-select:none; position:relative; }
+th.pt-sortable:hover { color:var(--accent); }
+th.pt-sortable::after { content:'⇅'; font-size:9px; margin-left:3px; opacity:0.3; }
+th.pt-sortable.sort-asc::after { content:'↑'; opacity:1; color:var(--accent); }
+th.pt-sortable.sort-desc::after { content:'↓'; opacity:1; color:var(--accent); }
 .pt-drag-cell { cursor:grab; text-align:center; color:var(--text-muted); font-size:14px; user-select:none; }
 .pt-drag-cell:active { cursor:grabbing; }
 tr.pt-dragging { opacity:0.4; }
-tr.pt-drop-above { box-shadow:0 -2px 0 0 var(--accent) inset; }
-tr.pt-drop-below { box-shadow:0 2px 0 0 var(--accent) inset; }
-tr.pt-drop-above td:first-child { position:relative; }
-tr.pt-drop-above td:first-child::before { content:''; position:absolute; top:-1px; left:0; right:0; height:2px; background:var(--accent); border-radius:1px; }
-tr.pt-drop-below td:first-child { position:relative; }
-tr.pt-drop-below td:first-child::before { content:''; position:absolute; bottom:-1px; left:0; right:0; height:2px; background:var(--accent); border-radius:1px; }
+tr.pt-drop-above { box-shadow:0 -3px 0 0 var(--accent); }
+tr.pt-drop-below { box-shadow:0 3px 0 0 var(--accent); }
 .ti-day-nav { display:flex; gap:4px; margin-bottom:10px; }
 .ti-day-nav-btn { padding:5px 10px; font-size:10px; font-weight:700; cursor:pointer; border:1px solid var(--border); background:var(--white); color:var(--text-muted); border-radius:6px; font-family:inherit; transition:all 0.15s; }
 .ti-day-nav-btn:hover { background:var(--off-white); color:var(--text-secondary); }
@@ -745,14 +746,14 @@ tr.pt-drop-below td:first-child::before { content:''; position:absolute; bottom:
         </div>
         <div id="ptViewAll" style="display:none;">
           <table class="data-table" style="min-width:700px;">
-            <thead><tr><th style="width:30px;"></th><th>Project</th><th>Owner</th><th>Due</th><th>Est. Time</th><th style="color:var(--green);">$ Value/yr</th><th>Value Type</th><th>Status</th><th>Next Action</th></tr></thead>
+            <thead><tr><th style="width:30px;"></th><th class="pt-sortable" onclick="ptSort('all','name')">Project</th><th class="pt-sortable" onclick="ptSort('all','owner')">Owner</th><th class="pt-sortable" onclick="ptSort('all','due')">Due</th><th class="pt-sortable" onclick="ptSort('all','est_time')">Est. Time</th><th class="pt-sortable" style="color:var(--green);" onclick="ptSort('all','dollar_value')">$ Value/yr</th><th class="pt-sortable" onclick="ptSort('all','value_type')">Value Type</th><th class="pt-sortable" onclick="ptSort('all','status')">Status</th><th>Next Action</th></tr></thead>
             <tbody id="ptTableAll"></tbody>
           </table>
         </div>
         <div id="ptViewNonNeg" style="display:none;">
           <div style="padding:10px 14px;background:#fff5f5;border-bottom:1px solid #fecaca;font-size:11px;color:#991b1b;font-weight:700;">🚨 Non-Negotiable Ops — Required. No direct revenue but cannot be skipped.</div>
           <table class="data-table" style="min-width:700px;">
-            <thead><tr><th style="width:30px;"></th><th>Item</th><th>Owner</th><th>Due</th><th>Est. Time</th><th>Risk / Value</th><th>Status</th><th>Next Action</th></tr></thead>
+            <thead><tr><th style="width:30px;"></th><th class="pt-sortable" onclick="ptSort('nonneg','name')">Item</th><th class="pt-sortable" onclick="ptSort('nonneg','owner')">Owner</th><th class="pt-sortable" onclick="ptSort('nonneg','due')">Due</th><th class="pt-sortable" onclick="ptSort('nonneg','est_time')">Est. Time</th><th class="pt-sortable" onclick="ptSort('nonneg','dollar_value')">Risk / Value</th><th class="pt-sortable" onclick="ptSort('nonneg','status')">Status</th><th>Next Action</th></tr></thead>
             <tbody id="ptTableNonNeg"></tbody>
           </table>
         </div>
@@ -764,7 +765,7 @@ tr.pt-drop-below td:first-child::before { content:''; position:absolute; bottom:
             </label>
           </div>
           <table class="data-table" style="min-width:700px;">
-            <thead><tr><th>Project</th><th>Owner</th><th>Completed</th><th>Status</th><th style="width:80px;"></th></tr></thead>
+            <thead><tr><th class="pt-sortable" onclick="ptSort('done','name')">Project</th><th class="pt-sortable" onclick="ptSort('done','owner')">Owner</th><th class="pt-sortable" onclick="ptSort('done','done_at')">Completed</th><th class="pt-sortable" onclick="ptSort('done','status')">Status</th><th style="width:80px;"></th></tr></thead>
             <tbody id="ptTableDone"></tbody>
           </table>
         </div>
@@ -1442,36 +1443,33 @@ async function ptDrop(e, targetId) {
     insertAbove = e.clientY < (rect.top + rect.height / 2);
   }
 
-  // Get priority projects in order
+  // Get priority projects in order (references to actual ptProjects items)
   var cat = ptProjects.find(p => p.id === ptDragId)?.category || 'priority';
   var ordered = ptProjects.filter(p => p.category === cat).sort((a,b) => a.sort_order - b.sort_order);
 
-  // Remove dragged item
-  var dragIdx = ordered.findIndex(p => p.id === ptDragId);
-  var dragItem = ordered.splice(dragIdx, 1)[0];
-
-  // Find target position
-  var targetIdx = ordered.findIndex(p => p.id === targetId);
+  // Build ID list, reorder
+  var ids = ordered.map(p => p.id);
+  var dragIdx = ids.indexOf(ptDragId);
+  ids.splice(dragIdx, 1);
+  var targetIdx = ids.indexOf(targetId);
   if (!insertAbove) targetIdx++;
+  ids.splice(targetIdx, 0, ptDragId);
 
-  // Insert at new position
-  ordered.splice(targetIdx, 0, dragItem);
-
-  // Reassign sort_order
+  // Update sort_order on the actual ptProjects items + persist
   var updates = [];
-  ordered.forEach(function(p, i) {
-    if (p.sort_order !== i + 1) {
-      p.sort_order = i + 1;
+  ids.forEach(function(pid, i) {
+    var proj = ptProjects.find(p => p.id === pid);
+    if (proj && proj.sort_order !== i + 1) {
+      proj.sort_order = i + 1;
       updates.push(fetch(PT_FN_URL, {
         method:'POST',
         headers:{'Content-Type':'application/json','Authorization':SB_HDR['Authorization'],'apikey':SB_KEY},
-        body: JSON.stringify({ action:'reorder', id:p.id, sort_order:p.sort_order })
+        body: JSON.stringify({ action:'reorder', id:pid, sort_order:i + 1 })
       }));
     }
   });
 
   ptDragId = null;
-  // Re-render immediately for responsiveness, then persist
   ptRenderPriority();
   if (updates.length > 0) await Promise.all(updates);
 }
@@ -1493,8 +1491,56 @@ function ptRenderPriority() {
   ).join('');
 }
 
+// Column sorting state
+var ptSortState = { view: null, field: null, dir: 'asc' };
+
+function ptSort(view, field) {
+  if (ptSortState.view === view && ptSortState.field === field) {
+    ptSortState.dir = ptSortState.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    ptSortState = { view: view, field: field, dir: 'asc' };
+  }
+  // Update header indicators
+  document.querySelectorAll('.pt-sortable').forEach(function(th) { th.classList.remove('sort-asc','sort-desc'); });
+  var activeView = document.getElementById(view === 'all' ? 'ptViewAll' : view === 'nonneg' ? 'ptViewNonNeg' : 'ptViewDone');
+  if (activeView) {
+    activeView.querySelectorAll('.pt-sortable').forEach(function(th) {
+      if (th.getAttribute('onclick').includes("'" + field + "'")) {
+        th.classList.add(ptSortState.dir === 'asc' ? 'sort-asc' : 'sort-desc');
+      }
+    });
+  }
+  if (view === 'all') ptRenderAll();
+  else if (view === 'nonneg') ptRenderNonNeg();
+  else if (view === 'done') ptRenderDone();
+}
+
+function ptSortRows(rows, view) {
+  if (ptSortState.view !== view || !ptSortState.field) return rows;
+  var field = ptSortState.field;
+  var dir = ptSortState.dir === 'asc' ? 1 : -1;
+  var statusOrder = { RED: 0, AMBER: 1, GREEN: 2, TBD: 3 };
+  return rows.slice().sort(function(a, b) {
+    var va = (a[field] || '').toString().toLowerCase();
+    var vb = (b[field] || '').toString().toLowerCase();
+    if (field === 'status') {
+      va = statusOrder[a.status] !== undefined ? statusOrder[a.status] : 99;
+      vb = statusOrder[b.status] !== undefined ? statusOrder[b.status] : 99;
+      return (va - vb) * dir;
+    }
+    if (field === 'done_at') {
+      va = a.done_at || '';
+      vb = b.done_at || '';
+    }
+    if (va < vb) return -1 * dir;
+    if (va > vb) return 1 * dir;
+    return 0;
+  });
+}
+
 function ptRenderAll() {
   var rows = ptProjects.filter(p => p.category === 'all' || p.category === 'priority').sort((a,b) => a.sort_order - b.sort_order);
+  rows = ptSortRows(rows, 'all');
   document.getElementById('ptTableAll').innerHTML = rows.map((r,i) =>
     `<tr style="background:${i%2===0?'var(--white)':'var(--off-white)'}">
       ${ptCheckbox(r.id)}
@@ -1512,6 +1558,7 @@ function ptRenderAll() {
 
 function ptRenderNonNeg() {
   var rows = ptProjects.filter(p => p.category === 'nonneg').sort((a,b) => a.sort_order - b.sort_order);
+  rows = ptSortRows(rows, 'nonneg');
   document.getElementById('ptTableNonNeg').innerHTML = rows.map((r,i) =>
     `<tr style="background:${i%2===0?'#fff5f5':'#fff'}">
       ${ptCheckbox(r.id)}
@@ -1531,6 +1578,7 @@ function ptRenderDone() {
   var since = filterEl.value || new Date(Date.now() - 30*86400000).toISOString().split('T')[0];
   if (!filterEl.value) filterEl.value = since;
   var rows = ptDoneProjects.filter(p => p.done_at && p.done_at.split('T')[0] >= since);
+  rows = ptSortRows(rows, 'done');
   document.getElementById('ptTableDone').innerHTML = rows.length === 0
     ? '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">No completed projects in this period</td></tr>'
     : rows.map((r,i) =>
