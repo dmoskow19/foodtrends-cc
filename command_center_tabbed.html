@@ -284,6 +284,20 @@ body { background:var(--off-white); color:var(--text-primary); font-family:Tahom
 </head>
 <body>
 
+<!-- AUTH GATE -->
+<div id="authOverlay" style="position:fixed;inset:0;z-index:9999;background:var(--off-white);display:flex;align-items:center;justify-content:center;">
+  <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:32px;max-width:360px;width:90%;box-shadow:0 4px 24px rgba(0,0,0,0.1);text-align:center;">
+    <div style="font-size:24px;margin-bottom:8px;">🔒</div>
+    <div style="font-size:16px;font-weight:700;margin-bottom:4px;">Command Center</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px;">Sign in to access your dashboard</div>
+    <input id="authEmail" type="email" placeholder="Email" value="David@foodtrends.com" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;margin-bottom:10px;box-sizing:border-box;">
+    <input id="authPassword" type="password" placeholder="Password" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;margin-bottom:14px;box-sizing:border-box;" onkeydown="if(event.key==='Enter')authLogin()">
+    <button onclick="authLogin()" style="width:100%;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px;">Sign In</button>
+    <button onclick="authSignup()" style="width:100%;padding:8px;background:var(--white);color:var(--accent);border:1px solid var(--accent-mid);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">First time? Create Account</button>
+    <div id="authError" style="margin-top:10px;font-size:11px;color:var(--red);display:none;"></div>
+  </div>
+</div>
+
 <!-- TOPBAR -->
 <div class="topbar">
   <div class="topbar-left">
@@ -944,10 +958,66 @@ body { background:var(--off-white); color:var(--text-primary); font-family:Tahom
   <div>Food Trends Command Center · Type BRIEFING each morning</div>
 </div>
 
+<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 const SB_URL = "https://cmfmgrdxelwanxqmldsv.supabase.co";
 const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNtZm1ncmR4ZWx3YW54cW1sZHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MTE1MzksImV4cCI6MjA5MDM4NzUzOX0.9OxjlB6D1YLSXvffZAgY94ayihvaBDqRMDvVdEXu9q8";
-const SB_HDR = { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY, "Content-Type": "application/json" };
+let SB_HDR = { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY, "Content-Type": "application/json" };
+
+// Supabase Auth client
+const sbClient = window.supabase.createClient(SB_URL, SB_KEY);
+let sbSession = null;
+
+function sbUpdateHeaders(session) {
+  sbSession = session;
+  if (session && session.access_token) {
+    SB_HDR = { "apikey": SB_KEY, "Authorization": "Bearer " + session.access_token, "Content-Type": "application/json" };
+  }
+}
+
+async function authLogin() {
+  var errEl = document.getElementById('authError');
+  errEl.style.display = 'none';
+  var email = document.getElementById('authEmail').value;
+  var pw = document.getElementById('authPassword').value;
+  var { data, error } = await sbClient.auth.signInWithPassword({ email: email, password: pw });
+  if (error) { errEl.textContent = error.message; errEl.style.display = 'block'; return; }
+  sbUpdateHeaders(data.session);
+  document.getElementById('authOverlay').style.display = 'none';
+  loadAll();
+}
+
+async function authSignup() {
+  var errEl = document.getElementById('authError');
+  errEl.style.display = 'none';
+  var email = document.getElementById('authEmail').value;
+  var pw = document.getElementById('authPassword').value;
+  if (!pw || pw.length < 6) { errEl.textContent = 'Password must be at least 6 characters'; errEl.style.display = 'block'; return; }
+  var { data, error } = await sbClient.auth.signUp({ email: email, password: pw });
+  if (error) { errEl.textContent = error.message; errEl.style.display = 'block'; return; }
+  if (data.session) {
+    sbUpdateHeaders(data.session);
+    document.getElementById('authOverlay').style.display = 'none';
+    loadAll();
+  } else {
+    errEl.textContent = 'Check your email to confirm your account, then sign in.';
+    errEl.style.display = 'block';
+    errEl.style.color = 'var(--green)';
+  }
+}
+
+async function authInit() {
+  var { data } = await sbClient.auth.getSession();
+  if (data.session) {
+    sbUpdateHeaders(data.session);
+    document.getElementById('authOverlay').style.display = 'none';
+    loadAll();
+  }
+  // Listen for token refresh
+  sbClient.auth.onAuthStateChange(function(event, session) {
+    if (session) sbUpdateHeaders(session);
+  });
+}
 
 async function sbFetch(table, filters) {
   const params = new URLSearchParams(filters);
@@ -1161,7 +1231,7 @@ const PT_FN_URL = SB_URL + '/functions/v1/project-actions';
 async function ptAction(body) {
   await fetch(PT_FN_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': SB_HDR['Authorization'], 'apikey': SB_KEY },
     body: JSON.stringify(body)
   });
   loadProjects();
@@ -1185,9 +1255,9 @@ async function ptDrop(e, targetId) {
   dragItem.sort_order = targetItem.sort_order;
   targetItem.sort_order = oldOrder;
   await Promise.all([
-    fetch(PT_FN_URL, { method:'POST', headers:{'Content-Type':'application/json'},
+    fetch(PT_FN_URL, { method:'POST', headers:{'Content-Type':'application/json','Authorization':SB_HDR['Authorization'],'apikey':SB_KEY},
       body: JSON.stringify({ action:'reorder', id:dragItem.id, sort_order:dragItem.sort_order }) }),
-    fetch(PT_FN_URL, { method:'POST', headers:{'Content-Type':'application/json'},
+    fetch(PT_FN_URL, { method:'POST', headers:{'Content-Type':'application/json','Authorization':SB_HDR['Authorization'],'apikey':SB_KEY},
       body: JSON.stringify({ action:'reorder', id:targetItem.id, sort_order:targetItem.sort_order }) })
   ]);
   ptDragId = null;
@@ -2275,7 +2345,7 @@ async function loadAll() {
   }
 }
 
-window.addEventListener("DOMContentLoaded", loadAll);
+window.addEventListener("DOMContentLoaded", authInit);
 </script>
 
 <script>
