@@ -993,17 +993,19 @@ async function authSignup() {
   var email = document.getElementById('authEmail').value;
   var pw = document.getElementById('authPassword').value;
   if (!pw || pw.length < 6) { errEl.textContent = 'Password must be at least 6 characters'; errEl.style.display = 'block'; return; }
-  var { data, error } = await sbClient.auth.signUp({ email: email, password: pw });
-  if (error) { errEl.textContent = error.message; errEl.style.display = 'block'; return; }
-  if (data.session) {
-    sbUpdateHeaders(data.session);
-    document.getElementById('authOverlay').style.display = 'none';
-    loadAll();
-  } else {
-    errEl.textContent = 'Check your email to confirm your account, then sign in.';
-    errEl.style.display = 'block';
-    errEl.style.color = 'var(--green)';
-  }
+  // Create account via admin Edge Function
+  var res = await fetch(SB_URL + '/functions/v1/create-admin-user', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email, password: pw, setup_key: 'foodtrends-setup-2026' })
+  });
+  var result = await res.json();
+  if (result.error) { errEl.textContent = result.error; errEl.style.display = 'block'; return; }
+  // Account created — now sign in
+  errEl.textContent = 'Account created! Signing in...';
+  errEl.style.display = 'block';
+  errEl.style.color = 'var(--green)';
+  setTimeout(function() { authLogin(); }, 500);
 }
 
 async function authInit() {
