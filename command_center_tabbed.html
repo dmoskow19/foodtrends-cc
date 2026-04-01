@@ -2011,13 +2011,6 @@ function tiRenderDay(cache, dateStr) {
     if (!typeTotals[ev.type]) typeTotals[ev.type] = 0;
     typeTotals[ev.type] += (ev.endH - ev.startH);
   });
-  // Also count explicit personal/free_work events from calendar (not just computed gaps)
-  dayEvents.forEach(function(ev) {
-    if (ev.type === 'personal') {
-      if (!typeTotals['personal']) typeTotals['personal'] = 0;
-      typeTotals['personal'] += (ev.endH - ev.startH);
-    }
-  });
 
   var legendOrder = [
     { key:'free_work', label:'Free Work', color:'#93c5fd' },
