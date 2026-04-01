@@ -452,9 +452,7 @@ body { background:var(--off-white); color:var(--text-primary); font-family:Tahom
         <div id="tiDayView">
           <div class="ti-day-nav" id="tiDayNav"></div>
           <div style="font-size:11px;font-weight:700;color:var(--text-secondary);margin-bottom:8px;" id="tiDayLabel">Today</div>
-          <div class="ti-timeline-wrap" id="tiTimeline"></div>
-          <div class="ti-hour-labels" id="tiHourLabels"></div>
-          <div id="tiDayEventList" style="margin-top:10px;display:flex;flex-direction:column;gap:5px;"></div>
+          <div id="tiDayEventList" style="display:flex;flex-direction:column;gap:5px;"></div>
         </div>
         <!-- Week View -->
         <div id="tiWeekView" style="display:none;">
@@ -1807,7 +1805,7 @@ async function tiRender() {
   }
 
   // Classify and filter events
-  var WORK_START = 5, WORK_END = 21;
+  var WORK_START = 5, WORK_END = 20.75;
   var classifiedEvents = [];
   var weekHasCommute = false, weekHasWorkout = false;
 
@@ -1954,7 +1952,7 @@ async function tiRender() {
 
 function tiRenderDay(cache, dateStr) {
   var byDate = cache.byDate, dlMap = cache.dlMap, nowET = cache.nowET, todayStr = cache.todayStr;
-  var WORK_START = 5, WORK_END = 21;
+  var WORK_START = 5, WORK_END = 20.75;
   var dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   var monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -1972,45 +1970,6 @@ function tiRenderDay(cache, dateStr) {
   var isToday = dateStr === todayStr;
   var label = dayNames[selDate.getDay()] + ' ' + monthNames[selDate.getMonth()] + ' ' + selDate.getDate();
   document.getElementById('tiDayLabel').textContent = label + (isToday ? ' — Today' : '');
-
-  // Timeline
-  var DS = WORK_START, DE = WORK_END, TOT = DE - DS;
-  var tl = document.getElementById('tiTimeline');
-  tl.innerHTML = '';
-  allBlocks.forEach(function(ev) {
-    var s = Math.max(ev.startH, DS), e = Math.min(ev.endH, DE);
-    if (e <= s) return;
-    var left = ((s-DS)/TOT*100).toFixed(1), width = ((e-s)/TOT*100).toFixed(1);
-    var seg = document.createElement('div');
-    seg.className = 'ti-timeline-seg';
-    var color = TI_COLORS[ev.type] || '#94a3b8';
-    seg.style.cssText = 'left:'+left+'%;width:'+width+'%;background:'+color+';opacity:0.85;border-right:2px solid #fff;';
-    seg.title = ev.subject + ' (' + ev.startH.toFixed(1) + '–' + ev.endH.toFixed(1) + ')';
-    if (parseFloat(width) > 8) {
-      var lbl = document.createElement('div');
-      lbl.className = 'ti-timeline-seg-label';
-      lbl.textContent = ev.subject;
-      seg.appendChild(lbl);
-    }
-    tl.appendChild(seg);
-  });
-
-  // Now marker (only on today)
-  if (isToday) {
-    var nowH = nowET.getHours() + nowET.getMinutes()/60;
-    if (nowH >= DS && nowH <= DE) {
-      var ne = document.createElement('div');
-      ne.className = 'ti-timeline-now';
-      ne.style.left = ((nowH-DS)/TOT*100).toFixed(1) + '%';
-      tl.appendChild(ne);
-    }
-  }
-
-  // Hour labels
-  var hours = [5,7,9,11,13,15,17,19,21];
-  document.getElementById('tiHourLabels').innerHTML = hours.map(function(h){
-    return '<div class="ti-hour-label">' + (h===12?'12p':h>12?(h-12)+'p':h+'a') + '</div>';
-  }).join('');
 
   // Event list
   var isFutureDay = dateStr > todayStr;
@@ -2084,7 +2043,7 @@ function tiRenderDay(cache, dateStr) {
 // tiRender continued — Week View Summary (called after tiRenderDay returns)
 function tiRenderWeekSummary(cache, weekWorkoutsDone, WORKOUT_TARGET, workoutROI) {
   var byDate = cache.byDate, dlMap = cache.dlMap, nowET = cache.nowET, todayStr = cache.todayStr;
-  var WORK_START = 5, WORK_END = 21;
+  var WORK_START = 5, WORK_END = 20.75;
   var nowH = nowET.getHours() + nowET.getMinutes()/60;
 
   var categories = [
@@ -2107,31 +2066,36 @@ function tiRenderWeekSummary(cache, weekWorkoutsDone, WORKOUT_TARGET, workoutROI
     var freeBlocks = computeFreeBlocks(dayEvts, WORK_START, WORK_END, dateKey);
     var allBlocks = dayEvts.concat(freeBlocks);
 
+    var dayDL = dlMap[dateKey] || {};
+    var workoutCompleted = dayDL.workout_completed === true;
+
     allBlocks.forEach(function(ev) {
       var hrs = ev.endH - ev.startH;
       if (hrs <= 0) return;
       var type = ev.type;
       if (!soFar.hasOwnProperty(type)) return;
 
+      // For workout: only count "so far" hours if workout was completed
+      if (type === 'workout' && (dateKey < todayStr || (dateKey === todayStr && ev.endH < nowH))) {
+        if (!workoutCompleted) return; // missed workout — don't count hours
+      }
+
       if (dateKey < todayStr) {
-        // Past day — all goes to so-far
         soFar[type] += hrs;
         if (type === 'meeting') mtgCountSoFar++;
       } else if (dateKey === todayStr) {
-        // Today — split at current time
         var evStart = ev.startH, evEnd = ev.endH;
         var pastPart = Math.min(evEnd, nowH) - evStart;
         var futurePart = evEnd - Math.max(evStart, nowH);
         if (pastPart > 0) {
           soFar[type] += pastPart;
-          if (type === 'meeting' && pastPart > 0) mtgCountSoFar++;
+          if (type === 'meeting') mtgCountSoFar++;
         }
         if (futurePart > 0) {
           projected[type] += futurePart;
-          if (type === 'meeting' && futurePart > 0 && pastPart <= 0) mtgCountProjected++;
+          if (type === 'meeting' && pastPart <= 0) mtgCountProjected++;
         }
       } else {
-        // Future day — all goes to projected
         projected[type] += hrs;
         if (type === 'meeting') mtgCountProjected++;
       }
