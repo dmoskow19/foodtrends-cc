@@ -226,6 +226,11 @@ body { background:var(--off-white); color:var(--text-primary); font-family:Tahom
 .ti-load-moderate { background:var(--amber-light); color:var(--amber); }
 .ti-load-heavy { background:var(--red-light); color:var(--red); }
 .ti-load-vacation { background:#fffbeb; color:#d97706; }
+.ti-day-nav { display:flex; gap:4px; margin-bottom:10px; }
+.ti-day-nav-btn { padding:5px 10px; font-size:10px; font-weight:700; cursor:pointer; border:1px solid var(--border); background:var(--white); color:var(--text-muted); border-radius:6px; font-family:inherit; transition:all 0.15s; }
+.ti-day-nav-btn:hover { background:var(--off-white); color:var(--text-secondary); }
+.ti-day-nav-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+.ti-day-nav-btn.today-marker { box-shadow:0 0 0 2px var(--accent-mid); }
 .ti-evt-block { display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; background:var(--off-white); border:1px solid var(--border); }
 .ti-evt-block.workout-missed { opacity:0.45; }
 .ti-evt-block.workout-missed .ti-evt-name { text-decoration:line-through; }
@@ -438,6 +443,7 @@ body { background:var(--off-white); color:var(--text-primary); font-family:Tahom
         </div>
         <!-- Day View -->
         <div id="tiDayView">
+          <div class="ti-day-nav" id="tiDayNav"></div>
           <div style="font-size:11px;font-weight:700;color:var(--text-secondary);margin-bottom:8px;" id="tiDayLabel">Today</div>
           <div class="ti-timeline-wrap" id="tiTimeline"></div>
           <div class="ti-hour-labels" id="tiHourLabels"></div>
@@ -1619,9 +1625,9 @@ const SKIP_KEYWORDS = ['wake','bedtime','shower','get ready','brush teeth','flos
 function tiClassifyEvent(subject) {
   var s = subject.toLowerCase();
   if (SKIP_KEYWORDS.some(function(k){ return s.includes(k); })) return null;
-  if (COMMUTE_KEYWORDS.some(function(k){ return s.includes(k); })) return 'commute';
   if (WORKOUT_KEYWORDS.some(function(k){ return s.includes(k); })) return 'workout';
   if (FAMILY_KEYWORDS.some(function(k){ return s.includes(k); })) return 'family';
+  if (COMMUTE_KEYWORDS.some(function(k){ return s.includes(k); })) return 'commute';
   return 'meeting';
 }
 
@@ -1654,6 +1660,8 @@ function tiFmtTime(dt) {
 }
 
 let tiView = 'day';
+let tiSelectedDate = null; // null = today
+let tiWeekCache = null; // cached week data for day switching
 
 function tiSetView(v) {
   tiView = v;
@@ -1662,6 +1670,11 @@ function tiSetView(v) {
   });
   document.getElementById('tiDayView').style.display = v==='day' ? '' : 'none';
   document.getElementById('tiWeekView').style.display = v==='week' ? '' : 'none';
+}
+
+function tiSelectDay(dateStr) {
+  tiSelectedDate = dateStr;
+  if (tiWeekCache) tiRenderDay(tiWeekCache, dateStr);
 }
 
 async function tiRender() {
@@ -1866,15 +1879,77 @@ async function tiRender() {
   else if (todayMtgs >= 3) { badge.textContent='Moderate'; badge.className='badge ti-load-badge ti-load-moderate'; }
   else { badge.textContent='Light'; badge.className='badge ti-load-badge ti-load-light'; }
 
-  // ── Day View: Timeline ──
-  var DS = WORK_START, DE = WORK_END, TOT = DE - DS;
+  // Cache week data for day navigation
+  tiWeekCache = { byDate: byDate, dlMap: dlMap, nowET: nowET, todayStr: todayStr, monday: monday, isVacation: isVacation };
+
+  // Build day nav buttons (Mon–Sun)
   var dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   var monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  document.getElementById('tiDayLabel').textContent = dayNames[nowET.getDay()] + ' ' + monthNames[nowET.getMonth()] + ' ' + nowET.getDate() + ' — Today';
+  var navEl = document.getElementById('tiDayNav');
+  navEl.innerHTML = '';
+  for (var di = 0; di < 7; di++) {
+    var dd = new Date(monday);
+    dd.setDate(monday.getDate() + di);
+    var ds = tiDateStr(dd);
+    var btn = document.createElement('button');
+    btn.className = 'ti-day-nav-btn';
+    if (ds === todayStr) btn.classList.add('today-marker');
+    var selDate = tiSelectedDate || todayStr;
+    if (ds === selDate) btn.classList.add('active');
+    btn.textContent = dayNames[dd.getDay()] + ' ' + (dd.getMonth()+1) + '/' + dd.getDate();
+    btn.setAttribute('data-date', ds);
+    btn.onclick = function(){ tiSelectDay(this.getAttribute('data-date')); };
+    navEl.appendChild(btn);
+  }
 
+  // Render the selected day (or today)
+  tiRenderDay(tiWeekCache, tiSelectedDate || todayStr);
+
+  // Render week summary
+  tiRenderWeekSummary(weekMeetings, weekFreeRemaining, weekWorkoutsDone, WORKOUT_TARGET, workoutROI, weekVacDays);
+}
+
+function tiRenderDay(cache, dateStr) {
+  var byDate = cache.byDate, dlMap = cache.dlMap, nowET = cache.nowET, todayStr = cache.todayStr;
+  var WORK_START = 5, WORK_END = 21;
+  var dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  // Update nav button active state
+  document.querySelectorAll('.ti-day-nav-btn').forEach(function(b){
+    b.classList.toggle('active', b.getAttribute('data-date') === dateStr);
+  });
+
+  var dayEvents = byDate[dateStr] || [];
+
+  // Compute free blocks
+  function localComputeFree(evts, ds, de) {
+    var blocks = [];
+    var sorted = evts.filter(function(e){ return e.type !== 'free'; })
+      .sort(function(a,b){ return a.startH - b.startH; });
+    var cursor = ds;
+    sorted.forEach(function(ev) {
+      var s = Math.max(ev.startH, ds), e = Math.min(ev.endH, de);
+      if (s > cursor) blocks.push({ type:'free', startH:cursor, endH:s, subject:'Free Block' });
+      cursor = Math.max(cursor, e);
+    });
+    if (cursor < de) blocks.push({ type:'free', startH:cursor, endH:de, subject:'Free Block' });
+    return blocks;
+  }
+
+  var freeBlocks = localComputeFree(dayEvents, WORK_START, WORK_END);
+  var allBlocks = dayEvents.concat(freeBlocks).sort(function(a,b){ return a.startH - b.startH; });
+
+  var selDate = new Date(dateStr + 'T12:00:00');
+  var isToday = dateStr === todayStr;
+  var label = dayNames[selDate.getDay()] + ' ' + monthNames[selDate.getMonth()] + ' ' + selDate.getDate();
+  document.getElementById('tiDayLabel').textContent = label + (isToday ? ' — Today' : '');
+
+  // Timeline
+  var DS = WORK_START, DE = WORK_END, TOT = DE - DS;
   var tl = document.getElementById('tiTimeline');
   tl.innerHTML = '';
-  allTodayBlocks.forEach(function(ev) {
+  allBlocks.forEach(function(ev) {
     var s = Math.max(ev.startH, DS), e = Math.min(ev.endH, DE);
     if (e <= s) return;
     var left = ((s-DS)/TOT*100).toFixed(1), width = ((e-s)/TOT*100).toFixed(1);
@@ -1892,13 +1967,15 @@ async function tiRender() {
     tl.appendChild(seg);
   });
 
-  // Now marker
-  var nowH = nowET.getHours() + nowET.getMinutes()/60;
-  if (nowH >= DS && nowH <= DE) {
-    var ne = document.createElement('div');
-    ne.className = 'ti-timeline-now';
-    ne.style.left = ((nowH-DS)/TOT*100).toFixed(1) + '%';
-    tl.appendChild(ne);
+  // Now marker (only on today)
+  if (isToday) {
+    var nowH = nowET.getHours() + nowET.getMinutes()/60;
+    if (nowH >= DS && nowH <= DE) {
+      var ne = document.createElement('div');
+      ne.className = 'ti-timeline-now';
+      ne.style.left = ((nowH-DS)/TOT*100).toFixed(1) + '%';
+      tl.appendChild(ne);
+    }
   }
 
   // Hour labels
@@ -1908,8 +1985,11 @@ async function tiRender() {
   }).join('');
 
   // Event list
+  var isFutureDay = dateStr > todayStr;
+  var isPastDay = dateStr < todayStr;
+  var nowH2 = isToday ? (nowET.getHours() + nowET.getMinutes()/60) : (isPastDay ? 24 : -1);
   var evList = document.getElementById('tiDayEventList');
-  evList.innerHTML = allTodayBlocks.map(function(ev) {
+  evList.innerHTML = allBlocks.map(function(ev) {
     var dur = ev.endH - ev.startH;
     var durStr = dur >= 1 ? (Math.round(dur*10)/10) + 'h' : Math.round(dur*60) + 'm';
     var color = TI_COLORS[ev.type] || '#94a3b8';
@@ -1917,14 +1997,13 @@ async function tiRender() {
     var startStr = tiFmt12(Math.floor(ev.startH), Math.round((ev.startH%1)*60));
     var endStr = tiFmt12(Math.floor(ev.endH), Math.round((ev.endH%1)*60));
 
-    // Workout display state
     var extraClass = '';
     var labelSuffix = '';
     if (ev.type === 'workout') {
-      var wDL = dlMap[todayStr] || {};
+      var wDL = dlMap[dateStr] || {};
       if (wDL.workout_completed === true) {
         labelSuffix = ' ✓';
-      } else if (ev.endH < nowH) {
+      } else if (ev.endH < nowH2) {
         extraClass = ' workout-missed';
         labelSuffix = ' (Missed)';
       } else {
@@ -1938,8 +2017,10 @@ async function tiRender() {
       '<div style="font-size:10px;color:var(--text-muted);">' + startStr + ' – ' + endStr + ' · ' + typeLabel + '</div></div>' +
       '<div style="font-size:11px;font-weight:700;color:var(--text-muted);flex-shrink:0;">' + durStr + '</div></div>';
   }).join('');
+}
 
-  // ── Week View: Summary Cards ──
+// tiRender continued — Week View Summary (called after tiRenderDay returns)
+function tiRenderWeekSummary(weekMeetings, weekFreeRemaining, weekWorkoutsDone, WORKOUT_TARGET, workoutROI, weekVacDays) {
   var wsEl = document.getElementById('tiWeekSummary');
   var roiColor = workoutROI >= 0 ? 'var(--green)' : 'var(--red)';
   var roiStr = (workoutROI > 0 ? '+$' : workoutROI < 0 ? '-$' : '$') + Math.abs(workoutROI).toLocaleString();
