@@ -1156,23 +1156,19 @@ function ptDragHandle(id) {
   return `<td style="cursor:grab;text-align:center;color:var(--text-muted);font-size:14px;" draggable="true" ondragstart="ptDragStart(event,${id})" ondragover="event.preventDefault()" ondrop="ptDrop(event,${id})">⋮⋮</td>`;
 }
 
-async function ptMarkDone(id) {
-  await fetch(SB_URL + '/rest/v1/projects?id=eq.' + id, {
-    method: 'PATCH',
-    headers: {...SB_HDR, 'Prefer':'return=minimal'},
-    body: JSON.stringify({ done: true, done_at: new Date().toISOString() })
+const PT_FN_URL = SB_URL + '/functions/v1/project-actions';
+
+async function ptAction(body) {
+  await fetch(PT_FN_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
   });
   loadProjects();
 }
 
-async function ptRestore(id) {
-  await fetch(SB_URL + '/rest/v1/projects?id=eq.' + id, {
-    method: 'PATCH',
-    headers: {...SB_HDR, 'Prefer':'return=minimal'},
-    body: JSON.stringify({ done: false, done_at: null })
-  });
-  loadProjects();
-}
+async function ptMarkDone(id) { ptAction({ action: 'mark_done', id: id }); }
+async function ptRestore(id) { ptAction({ action: 'restore', id: id }); }
 
 function ptDragStart(e, id) {
   ptDragId = id;
@@ -1189,14 +1185,10 @@ async function ptDrop(e, targetId) {
   dragItem.sort_order = targetItem.sort_order;
   targetItem.sort_order = oldOrder;
   await Promise.all([
-    fetch(SB_URL + '/rest/v1/projects?id=eq.' + dragItem.id, {
-      method: 'PATCH', headers: {...SB_HDR, 'Prefer':'return=minimal'},
-      body: JSON.stringify({ sort_order: dragItem.sort_order })
-    }),
-    fetch(SB_URL + '/rest/v1/projects?id=eq.' + targetItem.id, {
-      method: 'PATCH', headers: {...SB_HDR, 'Prefer':'return=minimal'},
-      body: JSON.stringify({ sort_order: targetItem.sort_order })
-    })
+    fetch(PT_FN_URL, { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ action:'reorder', id:dragItem.id, sort_order:dragItem.sort_order }) }),
+    fetch(PT_FN_URL, { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ action:'reorder', id:targetItem.id, sort_order:targetItem.sort_order }) })
   ]);
   ptDragId = null;
   loadProjects();
