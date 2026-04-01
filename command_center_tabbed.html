@@ -1728,8 +1728,21 @@ function computeFreeBlocks(dateEvents, dayStart, dayEnd, dateStr) {
 
 function addFreeGap(blocks, gapStart, gapEnd, workStart, workEnd, isWeekend) {
   if (isWeekend) {
-    // Weekends: gaps default to Family Time
-    blocks.push({ type:'family', startH:gapStart, endH:gapEnd, subject:'Family Time', startET:null, endET:null });
+    // Weekends: 5am-6:30am personal, 6:30am-7:45pm family, 7:45pm-8:45pm personal, 8:45pm+ personal
+    var WK_PERSONAL_AM_END = 6.5;   // 6:30am
+    var WK_FAMILY_END = 19.75;       // 7:45pm
+    var WK_PERSONAL_PM_END = 20.75;  // 8:45pm
+    var segments = [
+      { start:gapStart, end:Math.min(gapEnd, WK_PERSONAL_AM_END), type:'personal', subject:'Personal Time' },
+      { start:Math.max(gapStart, WK_PERSONAL_AM_END), end:Math.min(gapEnd, WK_FAMILY_END), type:'family', subject:'Family Time' },
+      { start:Math.max(gapStart, WK_FAMILY_END), end:Math.min(gapEnd, WK_PERSONAL_PM_END), type:'personal', subject:'Personal Time' },
+      { start:Math.max(gapStart, WK_PERSONAL_PM_END), end:gapEnd, type:'personal', subject:'Personal Time' }
+    ];
+    segments.forEach(function(seg) {
+      if (seg.end > seg.start) {
+        blocks.push({ type:seg.type, startH:seg.start, endH:seg.end, subject:seg.subject, startET:null, endET:null });
+      }
+    });
     return;
   }
   if (gapEnd <= workStart || gapStart >= workEnd) {
