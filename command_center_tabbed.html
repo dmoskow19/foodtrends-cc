@@ -406,21 +406,63 @@ tr.pt-drop-below { box-shadow:0 3px 0 0 var(--accent); }
 <div class="main">
   <div class="loading-bar" id="loadingBar" style="display:none"></div>
 
-  <!-- HERO KPIs -->
-  <div class="hero">
-    <div class="hero-kpi"><div class="hero-kpi-val blue">$15M</div><div class="hero-kpi-lbl">Current ARR</div></div>
-    <div class="hero-kpi"><div class="hero-kpi-val">$150M</div><div class="hero-kpi-lbl">10x Target</div><div class="mini-bar-bg"><div class="mini-bar-fill" style="width:10%;background:var(--accent)"></div></div></div>
-    <div class="hero-kpi"><div class="hero-kpi-val">~150</div><div class="hero-kpi-lbl">Large Events/yr</div></div>
-    <div class="hero-kpi"><div class="hero-kpi-val">6,000+</div><div class="hero-kpi-lbl">Small Orders/yr</div></div>
-    <div class="hero-kpi"><div class="hero-kpi-val amber">0</div><div class="hero-kpi-lbl">Sales Reps (→4-6)</div></div>
-    <div class="hero-kpi">
-      <div class="hero-kpi-val green" id="heroWeight">208.8</div>
-      <div class="hero-kpi-lbl">lbs → 190 Goal</div>
-      <div class="mini-bar-bg"><div class="mini-bar-fill" id="heroWeightBar" style="width:0%;background:var(--green)"></div></div>
+  <!-- YEARLY GOALS -->
+  <div class="section-label">🎯 Yearly Goals — 2026</div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">
+    <!-- PERSONAL -->
+    <div class="card">
+      <div class="card-header" style="padding:10px 14px 8px;">
+        <span class="card-title" style="color:var(--green);">🏆 Personal</span>
+      </div>
+      <div class="card-body" style="padding:10px 14px;">
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:12px;">🎾 Tennis Rating</span>
+            <span style="font-size:12px;font-weight:700;color:var(--accent);">3.0 → 3.5/4.0</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:12px;">🎾 Tennis Frequency</span>
+            <span style="font-size:12px;font-weight:700;color:var(--accent);">2x / week</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:12px;">⛳ Golf Frequency</span>
+            <span style="font-size:12px;font-weight:700;color:var(--accent);">1x / week</span>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="hero-kpi">
-      <div class="hero-kpi-val" id="heroEnergy" style="color:var(--text-muted)">—</div>
-      <div class="hero-kpi-lbl">Energy Today</div>
+    <!-- BUSINESS -->
+    <div class="card">
+      <div class="card-header" style="padding:10px 14px 8px;">
+        <span class="card-title" style="color:var(--accent);">💼 Business</span>
+      </div>
+      <div class="card-body" style="padding:10px 14px;">
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:12px;">👥 Sales Reps</span>
+            <span style="font-size:12px;font-weight:700;color:var(--amber);">0 → 4</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:12px;">💰 Revenue Run Rate</span>
+            <span style="font-size:12px;font-weight:700;color:var(--accent);">$15M → $20M</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- HEALTH -->
+    <div class="card">
+      <div class="card-header" style="padding:10px 14px 8px;">
+        <span class="card-title" style="color:var(--red);">❤️ Health</span>
+      </div>
+      <div class="card-body" style="padding:10px 14px;">
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:12px;">⚖️ Weight</span>
+            <span style="font-size:12px;font-weight:700;" id="heroWeight">214 → 190 lbs</span>
+          </div>
+          <div class="mini-bar-bg" style="width:100%;margin:0;"><div class="mini-bar-fill" id="heroWeightBar" style="width:0%;background:var(--green)"></div></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -432,20 +474,12 @@ tr.pt-drop-below { box-shadow:0 3px 0 0 var(--accent); }
       <div><div class="summary-val" id="dashInboxCount" style="color:var(--red)">—</div><div class="summary-lbl">🔴 Urgent Emails</div></div>
     </div>
     <div class="summary-card">
-      <div class="summary-icon">🔴</div>
-      <div><div class="summary-val" id="dashRedProjects" style="color:var(--red)">—</div><div class="summary-lbl">Blocked Projects</div></div>
-    </div>
-    <div class="summary-card">
       <div class="summary-icon">📧</div>
       <div><div class="summary-val" id="dashCDCards" style="color:var(--accent)">222</div><div class="summary-lbl">Active CD Cards</div></div>
     </div>
     <div class="summary-card">
       <div class="summary-icon">⚡</div>
-      <div><div class="summary-val" id="dashBotStatus" style="color:var(--amber)">1 Building</div><div class="summary-lbl">Bot Workforce</div></div>
-    </div>
-    <div class="summary-card">
-      <div class="summary-icon">⏱️</div>
-      <div><div class="summary-val" id="dashFreeTime" style="color:var(--green)">—</div><div class="summary-lbl">Free Hrs Today</div></div>
+      <div><div class="summary-val" id="heroEnergy" style="color:var(--text-muted)">—</div><div class="summary-lbl">Energy Today</div></div>
     </div>
     <div class="summary-card">
       <div class="summary-icon">🔥</div>
@@ -1250,15 +1284,15 @@ async function loadHealth() {
     const sleepColor = sleepVal >= 90 ? "green" : sleepVal >= 75 ? "amber" : "red";
 
     if (h.weight) {
-      document.getElementById("heroWeight").textContent = h.weight;
-      document.getElementById("heroWeight").className = "hero-kpi-val " + wColor;
+      document.getElementById("heroWeight").textContent = h.weight + " → 190 lbs";
+      document.getElementById("heroWeight").style.color = wColor === 'green' ? 'var(--green)' : wColor === 'amber' ? 'var(--amber)' : 'var(--red)';
       document.getElementById("heroWeightBar").style.width = pct + "%";
       document.getElementById("navWeight").textContent = h.weight + " lbs";
     }
     if (h.energyLevel) {
       const eEl = document.getElementById("heroEnergy");
       eEl.textContent = h.energyLevel + "/10";
-      eEl.className = "hero-kpi-val " + eColor;
+      eEl.style.color = eColor === 'green' ? 'var(--green)' : eColor === 'amber' ? 'var(--amber)' : 'var(--red)';
     }
 
     return [
@@ -2657,16 +2691,9 @@ function updateDashboardSummary() {
     if (projStatus) {
       var pmatch = projStatus.textContent.match(/(\d+)\s+🔴/);
       if (pmatch) {
-        var dr = document.getElementById('dashRedProjects');
         var bs = document.getElementById('badge-sales');
-        if (dr) dr.textContent = pmatch[1];
         if (bs) { bs.textContent = pmatch[1] + ' 🔴'; bs.className = 'tab-badge'; }
       }
-    }
-    var tiToday = document.getElementById('tiTodayFree');
-    var df = document.getElementById('dashFreeTime');
-    if (tiToday && df && tiToday.textContent && tiToday.textContent !== '—') {
-      df.textContent = tiToday.textContent;
     }
     var bb = document.getElementById('badge-bots');
     if (bb) { bb.textContent = '8 bots'; bb.className = 'tab-badge blue'; }
