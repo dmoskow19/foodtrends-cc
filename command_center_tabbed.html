@@ -456,7 +456,8 @@ body { background:var(--off-white); color:var(--text-primary); font-family:Tahom
         </div>
         <!-- Legend -->
         <div class="ti-legend">
-          <div class="ti-legend-item"><div class="ti-legend-dot" style="background:#16a34a"></div>Free</div>
+          <div class="ti-legend-item"><div class="ti-legend-dot" style="background:#16a34a"></div>Personal</div>
+          <div class="ti-legend-item"><div class="ti-legend-dot" style="background:#93c5fd"></div>Free Work</div>
           <div class="ti-legend-item"><div class="ti-legend-dot" style="background:#7c3aed"></div>Meeting</div>
           <div class="ti-legend-item"><div class="ti-legend-dot" style="background:#d97706"></div>Vacation</div>
           <div class="ti-legend-item"><div class="ti-legend-dot" style="background:#2563eb"></div>Commute</div>
@@ -1613,19 +1614,20 @@ async function loadNutrition() {
 
 // ── TIME INTELLIGENCE (LIVE) ────────────────────────────────
 const TI_COLORS = {
-  free:'#16a34a', meeting:'#7c3aed', commute:'#2563eb',
+  personal:'#16a34a', free_work:'#93c5fd', meeting:'#7c3aed', commute:'#2563eb',
   vacation:'#d97706', workout:'#dc2626', family:'#eab308'
 };
 
-const COMMUTE_KEYWORDS = ['commute','train','metro-north','grand central','rye','leave 5','trip to rye','leave for'];
-const WORKOUT_KEYWORDS = ['workout','gym','lift','training','push','pull','legs','cardio','fitbod','tennis','golf','sport','court','match','game','fitness'];
+const COMMUTE_KEYWORDS = ['commute','metro-north','grand central','leave 5','trip to rye','leave for','for train'];
+const WORKOUT_KEYWORDS = ['workout','gym','lift','push','pull','legs','cardio','fitbod','tennis','golf','sport','court','match','game','fitness'];
+const WORKOUT_EXCLUDE = ['sandler'];
 const FAMILY_KEYWORDS = ['family','kids','dinner with','bath time','bedtime routine','family time','family dinner','play time','homework'];
 const SKIP_KEYWORDS = ['wake','bedtime','shower','get ready','brush teeth','floss','asleep','no meetings','get home'];
 
 function tiClassifyEvent(subject) {
   var s = subject.toLowerCase();
   if (SKIP_KEYWORDS.some(function(k){ return s.includes(k); })) return null;
-  if (WORKOUT_KEYWORDS.some(function(k){ return s.includes(k); })) return 'workout';
+  if (WORKOUT_KEYWORDS.some(function(k){ return s.includes(k); }) && !WORKOUT_EXCLUDE.some(function(k){ return s.includes(k); })) return 'workout';
   if (FAMILY_KEYWORDS.some(function(k){ return s.includes(k); })) return 'family';
   if (COMMUTE_KEYWORDS.some(function(k){ return s.includes(k); })) return 'commute';
   return 'meeting';
@@ -1675,6 +1677,52 @@ function tiSetView(v) {
 function tiSelectDay(dateStr) {
   tiSelectedDate = dateStr;
   if (tiWeekCache) tiRenderDay(tiWeekCache, dateStr);
+}
+
+// Compute free blocks, split into personal vs free_work based on commute boundaries
+function computeFreeBlocks(dateEvents, dayStart, dayEnd) {
+  var commutes = dateEvents.filter(function(e){ return e.type === 'commute'; })
+    .sort(function(a,b){ return a.startH - b.startH; });
+  var workStart = dayStart, workEnd = dayEnd;
+  if (commutes.length >= 1) workStart = commutes[0].endH;
+  if (commutes.length >= 2) workEnd = commutes[commutes.length - 1].startH;
+
+  var blocks = [];
+  var sorted = dateEvents.filter(function(e){ return e.type !== 'personal' && e.type !== 'free_work'; })
+    .sort(function(a,b){ return a.startH - b.startH; });
+  var cursor = dayStart;
+  sorted.forEach(function(ev) {
+    var s = Math.max(ev.startH, dayStart);
+    var e = Math.min(ev.endH, dayEnd);
+    if (s > cursor) {
+      addFreeGap(blocks, cursor, s, workStart, workEnd);
+    }
+    cursor = Math.max(cursor, e);
+  });
+  if (cursor < dayEnd) {
+    addFreeGap(blocks, cursor, dayEnd, workStart, workEnd);
+  }
+  return blocks;
+}
+
+function addFreeGap(blocks, gapStart, gapEnd, workStart, workEnd) {
+  if (gapEnd <= workStart || gapStart >= workEnd) {
+    blocks.push({ type:'personal', startH:gapStart, endH:gapEnd, subject:'Personal Time', startET:null, endET:null });
+  } else if (gapStart >= workStart && gapEnd <= workEnd) {
+    blocks.push({ type:'free_work', startH:gapStart, endH:gapEnd, subject:'Free Working Time', startET:null, endET:null });
+  } else {
+    if (gapStart < workStart) {
+      blocks.push({ type:'personal', startH:gapStart, endH:workStart, subject:'Personal Time', startET:null, endET:null });
+    }
+    var fwStart = Math.max(gapStart, workStart);
+    var fwEnd = Math.min(gapEnd, workEnd);
+    if (fwEnd > fwStart) {
+      blocks.push({ type:'free_work', startH:fwStart, endH:fwEnd, subject:'Free Working Time', startET:null, endET:null });
+    }
+    if (gapEnd > workEnd) {
+      blocks.push({ type:'personal', startH:workEnd, endH:gapEnd, subject:'Personal Time', startET:null, endET:null });
+    }
+  }
 }
 
 async function tiRender() {
@@ -1757,28 +1805,6 @@ async function tiRender() {
     warnEl.innerHTML = '<div class="ti-warn">⚠️ No workout events found on calendar this week — check M365.</div>';
   }
 
-  // Compute free blocks for a given date's events
-  function computeFreeBlocks(dateEvents, dayStart, dayEnd) {
-    var blocks = [];
-    var sorted = dateEvents.filter(function(e){ return e.type !== 'free'; })
-      .sort(function(a,b){ return a.startH - b.startH; });
-    var cursor = dayStart;
-    sorted.forEach(function(ev) {
-      var s = Math.max(ev.startH, dayStart);
-      var e = Math.min(ev.endH, dayEnd);
-      if (s > cursor) {
-        blocks.push({ type:'free', startH:cursor, endH:s, subject:'Free Block',
-          startET: null, endET: null });
-      }
-      cursor = Math.max(cursor, e);
-    });
-    if (cursor < dayEnd) {
-      blocks.push({ type:'free', startH:cursor, endH:dayEnd, subject:'Free Block',
-        startET: null, endET: null });
-    }
-    return blocks;
-  }
-
   // Group events by date
   var byDate = {};
   for (var di = 0; di < 7; di++) {
@@ -1797,7 +1823,7 @@ async function tiRender() {
 
   // Calculate today free hours
   var todayFreeHrs = 0;
-  todayFreeBlocks.forEach(function(b){ todayFreeHrs += (b.endH - b.startH); });
+  todayFreeBlocks.forEach(function(b){ if (b.type === 'free_work') todayFreeHrs += (b.endH - b.startH); });
   todayFreeHrs = Math.round(todayFreeHrs * 10) / 10;
 
   // Week aggregations
@@ -1844,6 +1870,7 @@ async function tiRender() {
     if (dateKey >= todayStr && dayOfWeek >= 1 && dayOfWeek <= 5) {
       var freeB = computeFreeBlocks(dayEvts, WORK_START, WORK_END);
       freeB.forEach(function(b){
+        if (b.type !== 'free_work') return; // only count free working time
         var freeStart = b.startH, freeEnd = b.endH;
         if (dateKey === todayStr) {
           var nowH = nowET.getHours() + nowET.getMinutes()/60;
@@ -1922,22 +1949,7 @@ function tiRenderDay(cache, dateStr) {
 
   var dayEvents = byDate[dateStr] || [];
 
-  // Compute free blocks
-  function localComputeFree(evts, ds, de) {
-    var blocks = [];
-    var sorted = evts.filter(function(e){ return e.type !== 'free'; })
-      .sort(function(a,b){ return a.startH - b.startH; });
-    var cursor = ds;
-    sorted.forEach(function(ev) {
-      var s = Math.max(ev.startH, ds), e = Math.min(ev.endH, de);
-      if (s > cursor) blocks.push({ type:'free', startH:cursor, endH:s, subject:'Free Block' });
-      cursor = Math.max(cursor, e);
-    });
-    if (cursor < de) blocks.push({ type:'free', startH:cursor, endH:de, subject:'Free Block' });
-    return blocks;
-  }
-
-  var freeBlocks = localComputeFree(dayEvents, WORK_START, WORK_END);
+  var freeBlocks = computeFreeBlocks(dayEvents, WORK_START, WORK_END);
   var allBlocks = dayEvents.concat(freeBlocks).sort(function(a,b){ return a.startH - b.startH; });
 
   var selDate = new Date(dateStr + 'T12:00:00');
@@ -1993,7 +2005,7 @@ function tiRenderDay(cache, dateStr) {
     var dur = ev.endH - ev.startH;
     var durStr = dur >= 1 ? (Math.round(dur*10)/10) + 'h' : Math.round(dur*60) + 'm';
     var color = TI_COLORS[ev.type] || '#94a3b8';
-    var typeLabel = {free:'Free',meeting:'Meeting',commute:'Commute',vacation:'Vacation',workout:'Workout',family:'Family'}[ev.type] || ev.type;
+    var typeLabel = {personal:'Personal',free_work:'Free Work',meeting:'Meeting',commute:'Commute',vacation:'Vacation',workout:'Workout',family:'Family'}[ev.type] || ev.type;
     var startStr = tiFmt12(Math.floor(ev.startH), Math.round((ev.startH%1)*60));
     var endStr = tiFmt12(Math.floor(ev.endH), Math.round((ev.endH%1)*60));
 
