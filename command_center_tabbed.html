@@ -1693,7 +1693,15 @@ function tiSelectDay(dateStr) {
 }
 
 // Compute free blocks, split into personal vs free_work based on commute boundaries
-function computeFreeBlocks(dateEvents, dayStart, dayEnd) {
+function computeFreeBlocks(dateEvents, dayStart, dayEnd, dateStr) {
+  // Detect weekend
+  var isWeekend = false;
+  if (dateStr) {
+    var d = new Date(dateStr + 'T12:00:00');
+    var dow = d.getDay();
+    isWeekend = (dow === 0 || dow === 6);
+  }
+
   var commutes = dateEvents.filter(function(e){ return e.type === 'commute'; })
     .sort(function(a,b){ return a.startH - b.startH; });
   var workStart = dayStart, workEnd = dayEnd;
@@ -1708,17 +1716,22 @@ function computeFreeBlocks(dateEvents, dayStart, dayEnd) {
     var s = Math.max(ev.startH, dayStart);
     var e = Math.min(ev.endH, dayEnd);
     if (s > cursor) {
-      addFreeGap(blocks, cursor, s, workStart, workEnd);
+      addFreeGap(blocks, cursor, s, workStart, workEnd, isWeekend);
     }
     cursor = Math.max(cursor, e);
   });
   if (cursor < dayEnd) {
-    addFreeGap(blocks, cursor, dayEnd, workStart, workEnd);
+    addFreeGap(blocks, cursor, dayEnd, workStart, workEnd, isWeekend);
   }
   return blocks;
 }
 
-function addFreeGap(blocks, gapStart, gapEnd, workStart, workEnd) {
+function addFreeGap(blocks, gapStart, gapEnd, workStart, workEnd, isWeekend) {
+  if (isWeekend) {
+    // Weekends: gaps default to Family Time
+    blocks.push({ type:'family', startH:gapStart, endH:gapEnd, subject:'Family Time', startET:null, endET:null });
+    return;
+  }
   if (gapEnd <= workStart || gapStart >= workEnd) {
     blocks.push({ type:'personal', startH:gapStart, endH:gapEnd, subject:'Personal Time', startET:null, endET:null });
   } else if (gapStart >= workStart && gapEnd <= workEnd) {
@@ -1831,7 +1844,7 @@ async function tiRender() {
 
   // Today's events + free blocks
   var todayEvents = byDate[todayStr] || [];
-  var todayFreeBlocks = computeFreeBlocks(todayEvents, WORK_START, WORK_END);
+  var todayFreeBlocks = computeFreeBlocks(todayEvents, WORK_START, WORK_END, todayStr);
   var allTodayBlocks = todayEvents.concat(todayFreeBlocks).sort(function(a,b){ return a.startH - b.startH; });
 
   // Calculate today free hours
@@ -1942,7 +1955,7 @@ function tiRenderDay(cache, dateStr) {
 
   var dayEvents = byDate[dateStr] || [];
 
-  var freeBlocks = computeFreeBlocks(dayEvents, WORK_START, WORK_END);
+  var freeBlocks = computeFreeBlocks(dayEvents, WORK_START, WORK_END, dateStr);
   var allBlocks = dayEvents.concat(freeBlocks).sort(function(a,b){ return a.startH - b.startH; });
 
   var selDate = new Date(dateStr + 'T12:00:00');
@@ -2081,7 +2094,7 @@ function tiRenderWeekSummary(cache, weekWorkoutsDone, WORKOUT_TARGET, workoutROI
 
   Object.keys(byDate).forEach(function(dateKey) {
     var dayEvts = byDate[dateKey];
-    var freeBlocks = computeFreeBlocks(dayEvts, WORK_START, WORK_END);
+    var freeBlocks = computeFreeBlocks(dayEvts, WORK_START, WORK_END, dateKey);
     var allBlocks = dayEvts.concat(freeBlocks);
 
     allBlocks.forEach(function(ev) {
