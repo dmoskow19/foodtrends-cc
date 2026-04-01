@@ -372,8 +372,12 @@ body { background:var(--off-white); color:var(--text-primary); font-family:Tahom
       <div><div class="summary-val" id="dashFreeTime" style="color:var(--green)">—</div><div class="summary-lbl">Free Hrs Today</div></div>
     </div>
     <div class="summary-card">
+      <div class="summary-icon">🔥</div>
+      <div><div class="summary-val" id="dashCalories" style="color:var(--text-primary)">— cal</div><div class="summary-lbl">Yesterday's Calories</div></div>
+    </div>
+    <div class="summary-card">
       <div class="summary-icon">💪</div>
-      <div><div class="summary-val" id="dashCalories" style="color:var(--text-primary)">— cal</div><div class="summary-lbl">Today vs 1,800 Target</div></div>
+      <div><div class="summary-val" id="dashProtein" style="color:var(--text-primary)">— g</div><div class="summary-lbl">Yesterday's Protein</div></div>
     </div>
   </div>
 
@@ -1089,6 +1093,18 @@ async function loadHealth() {
       yesterdayCals: yesterdayCals || null,
       notes: yesterdayProtein ? "Protein yesterday: " + yesterdayProtein + "g" : (dl.notes || null)
     });
+
+    // Update snapshot cards
+    if (yesterdayCals) {
+      var dcEl = document.getElementById('dashCalories');
+      dcEl.textContent = yesterdayCals.toLocaleString() + ' cal';
+      dcEl.style.color = yesterdayCals > 1900 ? 'var(--red)' : yesterdayCals > 1600 ? 'var(--green)' : 'var(--amber)';
+    }
+    if (yesterdayProtein) {
+      var dpEl = document.getElementById('dashProtein');
+      dpEl.textContent = Math.round(yesterdayProtein) + 'g';
+      dpEl.style.color = yesterdayProtein >= 180 ? 'var(--green)' : yesterdayProtein >= 140 ? 'var(--amber)' : 'var(--red)';
+    }
 
   } catch(err) {
     statusEl.className = "badge badge-amber";
