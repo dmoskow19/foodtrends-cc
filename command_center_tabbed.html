@@ -1764,13 +1764,15 @@ function tiRender() {
 // ── INIT ─────────────────────────────────────────────────────
 async function loadWorkoutROI() {
   try {
-    const today = new Date().toISOString().slice(0,10);
+    // Use EST so cards reset at midnight Eastern
+    const estNow = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
+    const today = estNow.getFullYear() + "-" + String(estNow.getMonth()+1).padStart(2,"0") + "-" + String(estNow.getDate()).padStart(2,"0");
     const rows = await sbFetch("daily_log", {
       select: "workout_completed",
       date: "eq." + today,
       limit: 1
     });
-    const completed = rows && rows.length > 0 ? rows[0].workout_completed : null;
+    const val = rows && rows.length > 0 ? rows[0].workout_completed : null;
     const ids = [
       { missed: "roi-missed-card-1", done: "roi-completed-card-1" },
       { missed: "roi-missed-card-2", done: "roi-completed-card-2" }
@@ -1781,11 +1783,14 @@ async function loadWorkoutROI() {
       if (!missedEl || !doneEl) return;
       missedEl.className = "roi-card";
       doneEl.className = "roi-card";
-      if (completed === true) {
+      if (val === "yes" || val === true) {
         doneEl.classList.add("active-green");
         missedEl.classList.add("grayed-out");
-      } else { 
+      } else if (val === "no" || val === false) {
         missedEl.classList.add("active-red");
+        doneEl.classList.add("grayed-out");
+      } else {
+        missedEl.classList.add("grayed-out");
         doneEl.classList.add("grayed-out");
       }
     });
