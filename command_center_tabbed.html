@@ -201,23 +201,13 @@ body { background:var(--off-white); color:var(--text-primary); font-family:Tahom
 .ti-stat-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.6px; color:var(--text-muted); margin-bottom:4px; }
 .ti-stat-val { font-size:22px; font-weight:700; color:var(--text-primary); line-height:1.1; }
 .ti-stat-sub { font-size:11px; color:var(--text-muted); margin-top:3px; }
-.ti-week-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-bottom:14px; }
-.ti-day { background:var(--off-white); border:1px solid var(--border); border-radius:8px; padding:10px 8px; }
-.ti-day.today { border-color:var(--accent); background:var(--accent-light); }
-.ti-day.vacation { border-color:#d97706; background:#fffbeb; }
-.ti-day-label { font-size:10px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; }
-.ti-day.today .ti-day-label { color:var(--accent); }
-.ti-day.vacation .ti-day-label { color:#d97706; }
-.ti-stacked-bar { height:6px; border-radius:3px; overflow:hidden; display:flex; margin-bottom:8px; background:var(--light-gray); }
-.ti-bar-free { background:#16a34a; }
-.ti-bar-mtg { background:#7c3aed; }
-.ti-bar-vac { background:#d97706; }
-.ti-bar-commute { background:#2563eb; }
-.ti-day-free-val { font-size:18px; font-weight:700; line-height:1; }
-.ti-day-free-val.green { color:var(--green); }
-.ti-day-free-val.amber { color:var(--amber); }
-.ti-day-free-val.muted { color:var(--text-muted); }
-.ti-day-sub { font-size:9px; color:var(--text-muted); margin-top:2px; }
+.ti-mode-bar { display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:8px; margin-bottom:14px; font-size:12px; font-weight:700; }
+.ti-mode-standard { background:var(--green-light); color:var(--green); border:1px solid #bbf7d0; }
+.ti-mode-vacation { background:#fffbeb; color:#d97706; border:1px solid #fde68a; }
+.ti-week-summary { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:14px; }
+.ti-ws-card { background:var(--off-white); border:1px solid var(--border); border-radius:8px; padding:10px 8px; text-align:center; }
+.ti-ws-val { font-size:18px; font-weight:700; line-height:1.2; }
+.ti-ws-lbl { font-size:9px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.4px; margin-top:3px; }
 .ti-timeline-wrap { position:relative; height:36px; background:var(--light-gray); border-radius:6px; overflow:hidden; margin-bottom:4px; }
 .ti-timeline-seg { position:absolute; height:100%; display:flex; align-items:center; padding-left:4px; overflow:hidden; }
 .ti-timeline-seg-label { font-size:9px; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; }
@@ -236,6 +226,10 @@ body { background:var(--off-white); color:var(--text-primary); font-family:Tahom
 .ti-load-moderate { background:var(--amber-light); color:var(--amber); }
 .ti-load-heavy { background:var(--red-light); color:var(--red); }
 .ti-load-vacation { background:#fffbeb; color:#d97706; }
+.ti-evt-block { display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; background:var(--off-white); border:1px solid var(--border); }
+.ti-evt-block.workout-missed { opacity:0.45; }
+.ti-evt-block.workout-missed .ti-evt-name { text-decoration:line-through; }
+.ti-warn { background:#fffbeb; border:1px solid #fde68a; border-radius:6px; padding:8px 12px; font-size:11px; color:#d97706; margin-bottom:12px; font-weight:600; }
 
 /* ── WORKOUT ROI ── */
 .roi-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:12px; }
@@ -407,12 +401,12 @@ body { background:var(--off-white); color:var(--text-primary); font-family:Tahom
       </div>
     </div>
 
-    <!-- TIME INTELLIGENCE MINI -->
+    <!-- TIME INTELLIGENCE (LIVE) -->
     <div class="card">
       <div class="card-header">
         <span class="card-title">⏱️ Time Intelligence</span>
         <div style="display:flex;align-items:center;gap:8px;">
-          <span id="tiLoadBadge" class="badge ti-load-badge ti-load-vacation">Vacation</span>
+          <span id="tiLoadBadge" class="badge ti-load-badge ti-load-light">Loading…</span>
           <div class="ti-toggle">
             <button class="ti-toggle-btn active" onclick="tiSetView('day')">Day</button>
             <button class="ti-toggle-btn" onclick="tiSetView('week')">Week</button>
@@ -420,6 +414,11 @@ body { background:var(--off-white); color:var(--text-primary); font-family:Tahom
         </div>
       </div>
       <div class="card-body">
+        <!-- Operating Mode -->
+        <div id="tiModeBar" class="ti-mode-bar ti-mode-standard">⚙️ Standard Operating Mode</div>
+        <!-- Warnings -->
+        <div id="tiWarnings"></div>
+        <!-- KPI row -->
         <div class="ti-grid">
           <div class="ti-stat">
             <div class="ti-stat-label">Free Today</div>
@@ -427,30 +426,36 @@ body { background:var(--off-white); color:var(--text-primary); font-family:Tahom
             <div class="ti-stat-sub" id="tiTodaySub">Loading…</div>
           </div>
           <div class="ti-stat">
-            <div class="ti-stat-label">Remaining Week</div>
+            <div class="ti-stat-label">Free Rest of Week</div>
             <div class="ti-stat-val" id="tiWeekFree">—</div>
             <div class="ti-stat-sub" id="tiWeekSub">Loading…</div>
           </div>
           <div class="ti-stat">
-            <div class="ti-stat-label">Meetings/Week</div>
+            <div class="ti-stat-label">Meetings This Week</div>
             <div class="ti-stat-val" id="tiWeekMtg">—</div>
-            <div class="ti-stat-sub" id="tiMtgSub">hrs</div>
+            <div class="ti-stat-sub" id="tiMtgSub">Mon–Sun</div>
           </div>
         </div>
+        <!-- Day View -->
         <div id="tiDayView">
           <div style="font-size:11px;font-weight:700;color:var(--text-secondary);margin-bottom:8px;" id="tiDayLabel">Today</div>
           <div class="ti-timeline-wrap" id="tiTimeline"></div>
           <div class="ti-hour-labels" id="tiHourLabels"></div>
           <div id="tiDayEventList" style="margin-top:10px;display:flex;flex-direction:column;gap:5px;"></div>
         </div>
+        <!-- Week View -->
         <div id="tiWeekView" style="display:none;">
-          <div class="ti-week-grid" id="tiWeekGrid"></div>
+          <div style="font-size:11px;font-weight:700;color:var(--text-secondary);margin-bottom:10px;">Week Summary (Mon–Sun)</div>
+          <div class="ti-week-summary" id="tiWeekSummary"></div>
         </div>
+        <!-- Legend -->
         <div class="ti-legend">
           <div class="ti-legend-item"><div class="ti-legend-dot" style="background:#16a34a"></div>Free</div>
-          <div class="ti-legend-item"><div class="ti-legend-dot" style="background:#7c3aed"></div>Meetings</div>
+          <div class="ti-legend-item"><div class="ti-legend-dot" style="background:#7c3aed"></div>Meeting</div>
           <div class="ti-legend-item"><div class="ti-legend-dot" style="background:#d97706"></div>Vacation</div>
           <div class="ti-legend-item"><div class="ti-legend-dot" style="background:#2563eb"></div>Commute</div>
+          <div class="ti-legend-item"><div class="ti-legend-dot" style="background:#dc2626"></div>Workout</div>
+          <div class="ti-legend-item"><div class="ti-legend-dot" style="background:#eab308"></div>Family</div>
         </div>
       </div>
     </div>
@@ -1600,165 +1605,348 @@ async function loadNutrition() {
   }
 }
 
-// ── TIME INTELLIGENCE ────────────────────────────────────────
-// Week of Mar 26 – Apr 1, 2026 — updated each BRIEFING session
-const TI_DATA = {
-  weekLabel: 'Week of Mar 26 – Apr 1, 2026',
-  today: 4,
-  isVacation: true,
-  days: {
-    1: { label:'Mon Mar 30', free:4, mtg:3, vac:0, commute:2, note:'Howard Alt + Food/Menu + Social Media',
-      events:[
-        {t:'6:03',e:'6:43',label:'Train to GCT',type:'commute'},
-        {t:'7:00',e:'11:00',label:'Free Block',type:'free'},
-        {t:'11:00',e:'13:00',label:'Howard Alt Planning',type:'adhoc'},
-        {t:'13:00',e:'14:00',label:'Free Block',type:'free'},
-        {t:'14:00',e:'15:00',label:'Food/Menu Mtg',type:'recurring'},
-        {t:'15:00',e:'17:00',label:'Free Block',type:'free'},
-        {t:'17:00',e:'18:30',label:'Trip to Rye',type:'commute'}
-      ]},
-    2: { label:'Tue Mar 31', free:4.5, mtg:2.5, vac:0, commute:2, note:'Sandler + Pulse NYC + Solar',
-      events:[
-        {t:'6:03',e:'6:43',label:'Train to GCT',type:'commute'},
-        {t:'7:00',e:'10:30',label:'Free Block',type:'free'},
-        {t:'10:30',e:'12:00',label:'Sandler Training',type:'adhoc'},
-        {t:'12:00',e:'12:30',label:'Pulse NYC',type:'adhoc'},
-        {t:'12:30',e:'14:00',label:'Free Block',type:'free'},
-        {t:'14:00',e:'14:30',label:'Solar Discussion',type:'adhoc'},
-        {t:'14:30',e:'17:00',label:'Free Block',type:'free'},
-        {t:'17:00',e:'18:30',label:'Trip to Rye',type:'commute'}
-      ]},
-    3: { label:'Wed Apr 1', free:7, mtg:1, vac:0, commute:2, note:'Daily Sales Mtg',
-      events:[
-        {t:'6:03',e:'6:43',label:'Train to GCT',type:'commute'},
-        {t:'7:00',e:'16:00',label:'Free Block',type:'free'},
-        {t:'16:00',e:'17:00',label:'Daily Sales Mtg',type:'recurring'},
-        {t:'17:00',e:'18:30',label:'Trip to Rye',type:'commute'}
-      ]},
-    4: { label:'Thu Mar 26 (Today)', free:5, mtg:0, vac:5, commute:2, note:'Vacation — Four Seasons Palm Beach',
-      events:[
-        {t:'6:03',e:'6:43',label:'Train to GCT',type:'commute'},
-        {t:'7:00',e:'12:00',label:'Free Block',type:'free'},
-        {t:'12:00',e:'17:00',label:'Vacation Block',type:'vacation'},
-        {t:'17:00',e:'18:30',label:'Trip to Rye',type:'commute'}
-      ]},
-    5: { label:'Fri Mar 27', free:0, mtg:0, vac:8, commute:2, note:'Vacation — Four Seasons Palm Beach',
-      events:[
-        {t:'8:30',e:'16:30',label:'Vacation — Four Seasons',type:'vacation'}
-      ]}
-  },
-  totals: { free:20.5, mtg:6.5, vac:13, commute:10 }
-};
-
+// ── TIME INTELLIGENCE (LIVE) ────────────────────────────────
 const TI_COLORS = {
-  free:'#16a34a', commute:'#2563eb', recurring:'#7c3aed',
-  adhoc:'#7c3aed', vacation:'#d97706', routine:'#94a3b8'
+  free:'#16a34a', meeting:'#7c3aed', commute:'#2563eb',
+  vacation:'#d97706', workout:'#dc2626', family:'#eab308'
 };
 
-function tiT(t) { const p=t.split(':').map(Number); return p[0]+(p[1]||0)/60; }
-let tiView='day';
+const COMMUTE_KEYWORDS = ['commute','train','metro-north','grand central','rye','leave 5','trip to rye','leave for'];
+const WORKOUT_KEYWORDS = ['workout','gym','lift','training','push','pull','legs','cardio','fitbod','tennis','golf','sport','court','match','game','fitness'];
+const FAMILY_KEYWORDS = ['family','kids','dinner with','bath time','bedtime routine','family time','family dinner','play time','homework'];
+const SKIP_KEYWORDS = ['wake','bedtime','shower','get ready','brush teeth','floss','asleep','no meetings','get home'];
 
-function tiSetView(v) {
-  tiView=v;
-  document.querySelectorAll('.ti-toggle-btn').forEach(function(b,i){
-    b.classList.toggle('active',(v==='day'&&i===0)||(v==='week'&&i===1));
-  });
-  document.getElementById('tiDayView').style.display=v==='day'?'':'none';
-  document.getElementById('tiWeekView').style.display=v==='week'?'':'none';
+function tiClassifyEvent(subject) {
+  var s = subject.toLowerCase();
+  if (SKIP_KEYWORDS.some(function(k){ return s.includes(k); })) return null;
+  if (COMMUTE_KEYWORDS.some(function(k){ return s.includes(k); })) return 'commute';
+  if (WORKOUT_KEYWORDS.some(function(k){ return s.includes(k); })) return 'workout';
+  if (FAMILY_KEYWORDS.some(function(k){ return s.includes(k); })) return 'family';
+  return 'meeting';
 }
 
-function fmt12(t) {
-  // Convert "HH:MM" 24h string to "H:MMam/pm" or "H am/pm" format
-  var parts = t.split(':');
-  var h = parseInt(parts[0], 10);
-  var m = parseInt(parts[1] || '0', 10);
+function tiToET(utcStr) {
+  var d = new Date(utcStr);
+  return new Date(d.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+}
+
+function tiDateStr(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function tiGetMonday(d) {
+  var dt = new Date(d);
+  var day = dt.getDay();
+  var diff = day === 0 ? -6 : 1 - day;
+  dt.setDate(dt.getDate() + diff);
+  dt.setHours(0,0,0,0);
+  return dt;
+}
+
+function tiFmt12(h, m) {
   var ampm = h >= 12 ? 'pm' : 'am';
   var h12 = h % 12 || 12;
   return m === 0 ? h12 + ampm : h12 + ':' + (m < 10 ? '0' : '') + m + ampm;
 }
 
-function tiRender() {
-  var d=TI_DATA, td=d.days[d.today]||d.days[4];
-  var freeColor=td.free>=6?'var(--green)':td.free>=3?'var(--amber)':'var(--text-muted)';
-  var todayEl=document.getElementById('tiTodayFree');
-  todayEl.textContent=(d.isVacation&&td.vac>0)?'On Vacation':td.free+' hrs';
-  todayEl.style.color=freeColor;
-  document.getElementById('tiTodaySub').textContent=td.note||(td.mtg+'h mtg · '+td.commute+'h commute');
+function tiFmtTime(dt) {
+  return tiFmt12(dt.getHours(), dt.getMinutes());
+}
 
-  var remainFree=0;
-  Object.entries(d.days).forEach(function(entry){
-    if(Number(entry[0])>=d.today) remainFree+=entry[1].free;
+let tiView = 'day';
+
+function tiSetView(v) {
+  tiView = v;
+  document.querySelectorAll('.ti-toggle-btn').forEach(function(b, i){
+    b.classList.toggle('active', (v==='day' && i===0) || (v==='week' && i===1));
   });
-  document.getElementById('tiWeekFree').textContent=remainFree+' hrs';
-  document.getElementById('tiWeekSub').textContent='remaining of '+d.totals.free+' total';
-  document.getElementById('tiWeekMtg').textContent=d.totals.mtg+' hrs';
-  document.getElementById('tiMtgSub').textContent='recurring + ad hoc';
+  document.getElementById('tiDayView').style.display = v==='day' ? '' : 'none';
+  document.getElementById('tiWeekView').style.display = v==='week' ? '' : 'none';
+}
 
-  var badge=document.getElementById('tiLoadBadge');
-  if(d.isVacation&&td.vac>0){badge.textContent='Vacation';badge.className='badge ti-load-badge ti-load-vacation';}
-  else if(td.mtg>=5){badge.textContent='Heavy';badge.className='badge ti-load-badge ti-load-heavy';}
-  else if(td.mtg>=3){badge.textContent='Moderate';badge.className='badge ti-load-badge ti-load-moderate';}
-  else{badge.textContent='Light';badge.className='badge ti-load-badge ti-load-light';}
+async function tiRender() {
+  var nowET = tiToET(new Date().toISOString());
+  var todayStr = tiDateStr(nowET);
+  var monday = tiGetMonday(nowET);
+  var sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
 
-  var isFri=d.today===5;
-  var DS=isFri?8.5:6, DE=isFri?16.5:18.5, TOT=DE-DS;
-  document.getElementById('tiDayLabel').textContent=td.label||'Today';
+  var monStr = tiDateStr(monday);
+  var sunStr = tiDateStr(sunday);
 
-  var tl=document.getElementById('tiTimeline'); tl.innerHTML='';
-  (td.events||[]).forEach(function(ev){
-    var s=Math.max(tiT(ev.t),DS),e=Math.min(tiT(ev.e),DE);
-    if(e<=s) return;
-    var left=((s-DS)/TOT*100).toFixed(1), width=((e-s)/TOT*100).toFixed(1);
-    var seg=document.createElement('div'); seg.className='ti-timeline-seg';
-    seg.style.cssText='left:'+left+'%;width:'+width+'%;background:'+(TI_COLORS[ev.type]||'#94a3b8')+';opacity:0.85;border-right:2px solid #fff;';
-    seg.title=ev.label+' ('+ev.t+'–'+ev.e+')';
-    if(parseFloat(width)>10){var l=document.createElement('div');l.className='ti-timeline-seg-label';l.textContent=ev.label;seg.appendChild(l);}
+  // Fetch calendar events + daily_log for the week from Supabase
+  // Use raw fetch for range queries (sbFetch can't handle duplicate keys)
+  var calRows, dlRows;
+  try {
+    var calUrl = SB_URL + '/rest/v1/calendar_events?select=*&date=gte.' + monStr + '&date=lte.' + sunStr + '&order=start_time.asc';
+    var dlUrl = SB_URL + '/rest/v1/daily_log?select=*&date=gte.' + monStr + '&date=lte.' + sunStr + '&order=date.asc';
+    var results = await Promise.all([
+      fetch(calUrl, { headers: SB_HDR }).then(function(r){ return r.json(); }),
+      fetch(dlUrl, { headers: SB_HDR }).then(function(r){ return r.json(); })
+    ]);
+    calRows = results[0] || [];
+    dlRows = results[1] || [];
+  } catch(e) {
+    console.error('TI fetch error:', e);
+    document.getElementById('tiTodayFree').textContent = 'Error';
+    document.getElementById('tiTodaySub').textContent = 'Could not load calendar data';
+    return;
+  }
+
+  // Build daily_log lookup by date
+  var dlMap = {};
+  dlRows.forEach(function(r){ dlMap[r.date] = r; });
+
+  // Determine operating mode
+  var todayDL = dlMap[todayStr] || {};
+  var isVacation = todayDL.vacation_mode === true;
+  var modeBar = document.getElementById('tiModeBar');
+  if (isVacation) {
+    modeBar.className = 'ti-mode-bar ti-mode-vacation';
+    modeBar.textContent = '🏖️ Vacation Mode';
+  } else {
+    modeBar.className = 'ti-mode-bar ti-mode-standard';
+    modeBar.textContent = '⚙️ Standard Operating Mode';
+  }
+
+  // Classify and filter events
+  var WORK_START = 5, WORK_END = 21;
+  var classifiedEvents = [];
+  var weekHasCommute = false, weekHasWorkout = false;
+
+  calRows.forEach(function(row) {
+    var type = tiClassifyEvent(row.subject);
+    if (!type) return;
+    if (isVacation && row.date === todayStr && type === 'meeting') type = 'vacation';
+    var startET = tiToET(row.start_time);
+    var endET = tiToET(row.end_time);
+    classifiedEvents.push({
+      date: row.date,
+      subject: row.subject,
+      type: type,
+      startET: startET,
+      endET: endET,
+      startH: startET.getHours() + startET.getMinutes()/60,
+      endH: endET.getHours() + endET.getMinutes()/60
+    });
+    if (type === 'commute') weekHasCommute = true;
+    if (type === 'workout') weekHasWorkout = true;
+  });
+
+  // Warnings
+  var warnEl = document.getElementById('tiWarnings');
+  warnEl.innerHTML = '';
+  if (!weekHasCommute && !weekHasWorkout) {
+    warnEl.innerHTML = '<div class="ti-warn">⚠️ No commute or workout events found on calendar this week — check M365.</div>';
+  } else if (!weekHasCommute) {
+    warnEl.innerHTML = '<div class="ti-warn">⚠️ No commute events found on calendar this week — check M365.</div>';
+  } else if (!weekHasWorkout) {
+    warnEl.innerHTML = '<div class="ti-warn">⚠️ No workout events found on calendar this week — check M365.</div>';
+  }
+
+  // Compute free blocks for a given date's events
+  function computeFreeBlocks(dateEvents, dayStart, dayEnd) {
+    var blocks = [];
+    var sorted = dateEvents.filter(function(e){ return e.type !== 'free'; })
+      .sort(function(a,b){ return a.startH - b.startH; });
+    var cursor = dayStart;
+    sorted.forEach(function(ev) {
+      var s = Math.max(ev.startH, dayStart);
+      var e = Math.min(ev.endH, dayEnd);
+      if (s > cursor) {
+        blocks.push({ type:'free', startH:cursor, endH:s, subject:'Free Block',
+          startET: null, endET: null });
+      }
+      cursor = Math.max(cursor, e);
+    });
+    if (cursor < dayEnd) {
+      blocks.push({ type:'free', startH:cursor, endH:dayEnd, subject:'Free Block',
+        startET: null, endET: null });
+    }
+    return blocks;
+  }
+
+  // Group events by date
+  var byDate = {};
+  for (var di = 0; di < 7; di++) {
+    var dd = new Date(monday);
+    dd.setDate(monday.getDate() + di);
+    byDate[tiDateStr(dd)] = [];
+  }
+  classifiedEvents.forEach(function(ev) {
+    if (byDate[ev.date]) byDate[ev.date].push(ev);
+  });
+
+  // Today's events + free blocks
+  var todayEvents = byDate[todayStr] || [];
+  var todayFreeBlocks = computeFreeBlocks(todayEvents, WORK_START, WORK_END);
+  var allTodayBlocks = todayEvents.concat(todayFreeBlocks).sort(function(a,b){ return a.startH - b.startH; });
+
+  // Calculate today free hours
+  var todayFreeHrs = 0;
+  todayFreeBlocks.forEach(function(b){ todayFreeHrs += (b.endH - b.startH); });
+  todayFreeHrs = Math.round(todayFreeHrs * 10) / 10;
+
+  // Week aggregations
+  var weekMeetings = 0, weekFreeRemaining = 0, weekVacDays = 0;
+  var weekWorkoutsDone = 0;
+  var workoutROI = 0;
+  var WORKOUT_TARGET = 4;
+  var ROI_PER_DAY = 5005;
+
+  Object.keys(byDate).forEach(function(dateKey) {
+    var dayEvts = byDate[dateKey];
+    var dayDL = dlMap[dateKey] || {};
+
+    // Count meetings
+    dayEvts.forEach(function(ev) {
+      if (ev.type === 'meeting') weekMeetings++;
+    });
+
+    // Vacation days
+    if (dayDL.vacation_mode === true) weekVacDays++;
+
+    // Workout tracking
+    var workoutEvts = dayEvts.filter(function(ev){ return ev.type === 'workout'; });
+    if (workoutEvts.length > 0) {
+      if (dayDL.workout_completed === true) {
+        weekWorkoutsDone++;
+        workoutROI += ROI_PER_DAY;
+      } else if (dateKey < todayStr) {
+        // Past day, missed
+        workoutROI -= ROI_PER_DAY;
+      } else if (dateKey === todayStr) {
+        // Today: check if the workout event time has already passed
+        var latestWorkoutEnd = Math.max.apply(null, workoutEvts.map(function(ev){ return ev.endH; }));
+        var currentH = nowET.getHours() + nowET.getMinutes()/60;
+        if (currentH > latestWorkoutEnd) {
+          workoutROI -= ROI_PER_DAY;
+        }
+      }
+    }
+
+    // Free blocks remaining (today onward)
+    if (dateKey >= todayStr) {
+      var freeB = computeFreeBlocks(dayEvts, WORK_START, WORK_END);
+      freeB.forEach(function(b){
+        var freeStart = b.startH, freeEnd = b.endH;
+        if (dateKey === todayStr) {
+          var nowH = nowET.getHours() + nowET.getMinutes()/60;
+          freeStart = Math.max(freeStart, nowH);
+        }
+        if (freeEnd > freeStart) weekFreeRemaining += (freeEnd - freeStart);
+      });
+    }
+  });
+  weekFreeRemaining = Math.round(weekFreeRemaining * 10) / 10;
+
+  // Update KPI stats
+  var todayEl = document.getElementById('tiTodayFree');
+  if (isVacation) {
+    todayEl.textContent = 'Vacation';
+    todayEl.style.color = '#d97706';
+  } else {
+    todayEl.textContent = todayFreeHrs + ' hrs';
+    todayEl.style.color = todayFreeHrs >= 6 ? 'var(--green)' : todayFreeHrs >= 3 ? 'var(--amber)' : 'var(--text-muted)';
+  }
+  var todayMtgs = todayEvents.filter(function(e){ return e.type==='meeting'; }).length;
+  document.getElementById('tiTodaySub').textContent = todayMtgs + ' meeting' + (todayMtgs !== 1 ? 's' : '') + ' today';
+
+  document.getElementById('tiWeekFree').textContent = weekFreeRemaining + ' hrs';
+  document.getElementById('tiWeekSub').textContent = 'remaining this week';
+  document.getElementById('tiWeekMtg').textContent = weekMeetings;
+  document.getElementById('tiMtgSub').textContent = 'Mon–Sun total';
+
+  // Badge
+  var badge = document.getElementById('tiLoadBadge');
+  if (isVacation) { badge.textContent='Vacation'; badge.className='badge ti-load-badge ti-load-vacation'; }
+  else if (todayMtgs >= 5) { badge.textContent='Heavy'; badge.className='badge ti-load-badge ti-load-heavy'; }
+  else if (todayMtgs >= 3) { badge.textContent='Moderate'; badge.className='badge ti-load-badge ti-load-moderate'; }
+  else { badge.textContent='Light'; badge.className='badge ti-load-badge ti-load-light'; }
+
+  // ── Day View: Timeline ──
+  var DS = WORK_START, DE = WORK_END, TOT = DE - DS;
+  var dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('tiDayLabel').textContent = dayNames[nowET.getDay()] + ' ' + monthNames[nowET.getMonth()] + ' ' + nowET.getDate() + ' — Today';
+
+  var tl = document.getElementById('tiTimeline');
+  tl.innerHTML = '';
+  allTodayBlocks.forEach(function(ev) {
+    var s = Math.max(ev.startH, DS), e = Math.min(ev.endH, DE);
+    if (e <= s) return;
+    var left = ((s-DS)/TOT*100).toFixed(1), width = ((e-s)/TOT*100).toFixed(1);
+    var seg = document.createElement('div');
+    seg.className = 'ti-timeline-seg';
+    var color = TI_COLORS[ev.type] || '#94a3b8';
+    seg.style.cssText = 'left:'+left+'%;width:'+width+'%;background:'+color+';opacity:0.85;border-right:2px solid #fff;';
+    seg.title = ev.subject + ' (' + ev.startH.toFixed(1) + '–' + ev.endH.toFixed(1) + ')';
+    if (parseFloat(width) > 8) {
+      var lbl = document.createElement('div');
+      lbl.className = 'ti-timeline-seg-label';
+      lbl.textContent = ev.subject;
+      seg.appendChild(lbl);
+    }
     tl.appendChild(seg);
   });
 
-  var now=new Date(), nowH=now.getHours()+now.getMinutes()/60;
-  if(nowH>=DS&&nowH<=DE){
-    var ne=document.createElement('div'); ne.className='ti-timeline-now';
-    ne.style.left=((nowH-DS)/TOT*100).toFixed(1)+'%'; tl.appendChild(ne);
+  // Now marker
+  var nowH = nowET.getHours() + nowET.getMinutes()/60;
+  if (nowH >= DS && nowH <= DE) {
+    var ne = document.createElement('div');
+    ne.className = 'ti-timeline-now';
+    ne.style.left = ((nowH-DS)/TOT*100).toFixed(1) + '%';
+    tl.appendChild(ne);
   }
 
-  var hours=isFri?[9,10,11,12,13,14,15,16]:[6,8,10,12,14,16,18];
-  document.getElementById('tiHourLabels').innerHTML=hours.map(function(h){
-    return '<div class="ti-hour-label">'+(h===12?'12p':h>12?h-12+'p':h+'a')+'</div>';
+  // Hour labels
+  var hours = [5,7,9,11,13,15,17,19,21];
+  document.getElementById('tiHourLabels').innerHTML = hours.map(function(h){
+    return '<div class="ti-hour-label">' + (h===12?'12p':h>12?(h-12)+'p':h+'a') + '</div>';
   }).join('');
 
-  var evList=document.getElementById('tiDayEventList');
-  evList.innerHTML=(td.events||[]).map(function(ev){
-    var dur=tiT(ev.e)-tiT(ev.t), durStr=dur>=1?Math.round(dur*10)/10+'h':Math.round(dur*60)+'m';
-    var tl2={free:'Free',commute:'Transit',recurring:'Recurring',adhoc:'Ad Hoc',vacation:'Vacation',routine:'Routine'}[ev.type]||ev.type;
-    return '<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;background:var(--off-white);border:1px solid var(--border);">'+
-      '<div style="width:8px;height:8px;border-radius:50%;background:'+(TI_COLORS[ev.type]||'#94a3b8')+';flex-shrink:0;"></div>'+
-      '<div style="flex:1;"><div style="font-size:12px;font-weight:700;color:var(--text-primary);">'+ev.label+'</div>'+
-      '<div style="font-size:10px;color:var(--text-muted);">'+fmt12(ev.t)+' – '+fmt12(ev.e)+' · '+tl2+'</div></div>'+
-      '<div style="font-size:11px;font-weight:700;color:var(--text-muted);flex-shrink:0;">'+durStr+'</div></div>';
+  // Event list
+  var evList = document.getElementById('tiDayEventList');
+  evList.innerHTML = allTodayBlocks.map(function(ev) {
+    var dur = ev.endH - ev.startH;
+    var durStr = dur >= 1 ? (Math.round(dur*10)/10) + 'h' : Math.round(dur*60) + 'm';
+    var color = TI_COLORS[ev.type] || '#94a3b8';
+    var typeLabel = {free:'Free',meeting:'Meeting',commute:'Commute',vacation:'Vacation',workout:'Workout',family:'Family'}[ev.type] || ev.type;
+    var startStr = tiFmt12(Math.floor(ev.startH), Math.round((ev.startH%1)*60));
+    var endStr = tiFmt12(Math.floor(ev.endH), Math.round((ev.endH%1)*60));
+
+    // Workout display state
+    var extraClass = '';
+    var labelSuffix = '';
+    if (ev.type === 'workout') {
+      var wDL = dlMap[todayStr] || {};
+      if (wDL.workout_completed === true) {
+        labelSuffix = ' ✓';
+      } else if (ev.endH < nowH) {
+        extraClass = ' workout-missed';
+        labelSuffix = ' (Missed)';
+      } else {
+        labelSuffix = ' — Upcoming';
+      }
+    }
+
+    return '<div class="ti-evt-block' + extraClass + '">' +
+      '<div style="width:8px;height:8px;border-radius:50%;background:'+color+';flex-shrink:0;"></div>' +
+      '<div style="flex:1;"><div class="ti-evt-name" style="font-size:12px;font-weight:700;color:var(--text-primary);">' + ev.subject + labelSuffix + '</div>' +
+      '<div style="font-size:10px;color:var(--text-muted);">' + startStr + ' – ' + endStr + ' · ' + typeLabel + '</div></div>' +
+      '<div style="font-size:11px;font-weight:700;color:var(--text-muted);flex-shrink:0;">' + durStr + '</div></div>';
   }).join('');
 
-  var grid=document.getElementById('tiWeekGrid');
-  grid.innerHTML=Object.entries(d.days).map(function(entry){
-    var k=entry[0], day=entry[1];
-    var isT=Number(k)===d.today;
-    var fC=day.free>=6?'green':day.free>=3?'amber':'muted';
-    var fp=Math.round(day.free/10.5*100), mp=Math.round(day.mtg/10.5*100);
-    var vp=Math.round(day.vac/10.5*100), cp=Math.round(day.commute/10.5*100);
-    var cls=isT?'ti-day today':(day.vac>0?'ti-day vacation':'ti-day');
-    return '<div class="'+cls+'">'+
-      '<div class="ti-day-label">'+day.label+(isT?' ◀':'')+' </div>'+
-      '<div class="ti-stacked-bar">'+
-        '<div class="ti-bar-free" style="width:'+fp+'%"></div>'+
-        '<div class="ti-bar-mtg" style="width:'+mp+'%"></div>'+
-        '<div class="ti-bar-vac" style="width:'+vp+'%"></div>'+
-        '<div class="ti-bar-commute" style="width:'+cp+'%"></div>'+
-      '</div>'+
-      '<div class="ti-day-free-val '+fC+'">'+day.free+'h</div>'+
-      '<div class="ti-day-sub">'+(day.mtg?day.mtg+'h mtg · ':'')+
-        (day.vac?day.vac+'h vac':'open')+'</div>'+
-    '</div>';
-  }).join('');
+  // ── Week View: Summary Cards ──
+  var wsEl = document.getElementById('tiWeekSummary');
+  var roiColor = workoutROI >= 0 ? 'var(--green)' : 'var(--red)';
+  var roiStr = (workoutROI > 0 ? '+$' : workoutROI < 0 ? '-$' : '$') + Math.abs(workoutROI).toLocaleString();
+  wsEl.innerHTML =
+    '<div class="ti-ws-card"><div class="ti-ws-val" style="color:var(--accent);">' + weekMeetings + '</div><div class="ti-ws-lbl">Meetings</div></div>' +
+    '<div class="ti-ws-card"><div class="ti-ws-val" style="color:var(--green);">' + weekFreeRemaining + 'h</div><div class="ti-ws-lbl">Free Remaining</div></div>' +
+    '<div class="ti-ws-card"><div class="ti-ws-val" style="color:var(--red);">' + weekWorkoutsDone + ' of ' + WORKOUT_TARGET + '</div><div class="ti-ws-lbl">Workouts</div></div>' +
+    '<div class="ti-ws-card"><div class="ti-ws-val" style="color:' + roiColor + ';">' + roiStr + '</div><div class="ti-ws-lbl">Workout ROI</div></div>' +
+    '<div class="ti-ws-card"><div class="ti-ws-val" style="color:#d97706;">' + weekVacDays + '</div><div class="ti-ws-lbl">Vacation Days</div></div>';
 }
 
 // ── INIT ─────────────────────────────────────────────────────
