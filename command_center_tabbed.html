@@ -958,14 +958,19 @@ body { background:var(--off-white); color:var(--text-primary); font-family:Tahom
   <div>Food Trends Command Center · Type BRIEFING each morning</div>
 </div>
 
-<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
 const SB_URL = "https://cmfmgrdxelwanxqmldsv.supabase.co";
 const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNtZm1ncmR4ZWx3YW54cW1sZHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MTE1MzksImV4cCI6MjA5MDM4NzUzOX0.9OxjlB6D1YLSXvffZAgY94ayihvaBDqRMDvVdEXu9q8";
 let SB_HDR = { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY, "Content-Type": "application/json" };
 
 // Supabase Auth client
-const sbClient = window.supabase.createClient(SB_URL, SB_KEY);
+var sbClient;
+if (window.supabase && window.supabase.createClient) {
+  sbClient = window.supabase.createClient(SB_URL, SB_KEY);
+} else {
+  console.error('Supabase SDK failed to load');
+}
 let sbSession = null;
 
 function sbUpdateHeaders(session) {
