@@ -1682,7 +1682,7 @@ function computeFreeBlocks(dateEvents, dayStart, dayEnd) {
   if (commutes.length >= 2) workEnd = commutes[commutes.length - 1].startH;
 
   var blocks = [];
-  var sorted = dateEvents.filter(function(e){ return e.type !== 'personal' && e.type !== 'free_work'; })
+  var sorted = dateEvents.slice()
     .sort(function(a,b){ return a.startH - b.startH; });
   var cursor = dayStart;
   sorted.forEach(function(ev) {
