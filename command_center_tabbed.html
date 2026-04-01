@@ -1014,8 +1014,10 @@ async function loadHealth() {
     const w = h.weight || 208.8;
     const pct = Math.max(0, Math.min(100, ((208.8-w)/(208.8-190))*100));
     const wColor = w < 200 ? "green" : w < 205 ? "amber" : "red";
-    const calColor = h.todayCals > 1900 ? "red" : h.todayCals > 1600 ? "green" : "amber";
+    const calColor = h.yesterdayCals > 1900 ? "red" : h.yesterdayCals > 1600 ? "green" : "amber";
     const eColor = h.energyLevel >= 7 ? "green" : h.energyLevel >= 5 ? "amber" : "red";
+    const sleepVal = Number(h.sleepScore) || 0;
+    const sleepColor = sleepVal >= 90 ? "green" : sleepVal >= 75 ? "amber" : "red";
 
     if (h.weight) {
       document.getElementById("heroWeight").textContent = h.weight;
@@ -1032,9 +1034,9 @@ async function loadHealth() {
     return [
       ["Weight", w+" lbs → 190 lbs", wColor, pct, "var(--green)"],
       ["BMI", (h.bmi||30.0), "amber", Math.min(100,(h.bmi||30)/35*100), "var(--amber)"],
-      ["Sleep (Eight Sleep)", h.sleepScore||"80+", "green", Math.min(100,Number(h.sleepScore)||80), "var(--green)"],
+      ["Sleep (Eight Sleep)", h.sleepScore||"—", sleepColor, Math.min(100,sleepVal), sleepVal >= 90 ? "var(--green)" : sleepVal >= 75 ? "var(--amber)" : "var(--red)"],
       ["Energy Today", h.energyLevel ? h.energyLevel+"/10" : "—", h.energyLevel ? eColor : "", h.energyLevel ? h.energyLevel*10 : 0, "var(--accent)"],
-      ["Today's Calories", h.todayCals ? h.todayCals+" / 1,800" : "— / 1,800", h.todayCals ? calColor : "", h.todayCals ? Math.min(100,h.todayCals/1800*100) : 0, h.todayCals > 1900 ? "var(--red)" : "var(--green)"]
+      ["Yesterday's Calories", h.yesterdayCals ? h.yesterdayCals+" / 1,800" : "— / 1,800", h.yesterdayCals ? calColor : "", h.yesterdayCals ? Math.min(100,h.yesterdayCals/1800*100) : 0, h.yesterdayCals > 1900 ? "var(--red)" : "var(--green)"]
     ].map(([label, val, color, barPct, barColor]) => `
       <div class="health-row">
         <span class="health-metric">${label}</span>
@@ -1059,16 +1061,17 @@ async function loadHealth() {
       limit: 1
     });
 
-    // Pull today's food_log and sum calories + protein
+    // Pull yesterday's food_log and sum calories + protein
+    const yesterday = new Date(new Date(todayStr).getTime() - 86400000).toISOString().split('T')[0];
     const flRows = await sbFetch("food_log", {
       select: "calories,protein_g",
-      date: "eq." + todayStr
+      date: "eq." + yesterday
     });
 
     const dl = dlRows[0] || {};
     const hs = hsRows[0] || {};
-    const todayCals = flRows.reduce((sum, r) => sum + (r.calories || 0), 0);
-    const todayProtein = flRows.reduce((sum, r) => sum + (r.protein_g || 0), 0);
+    const yesterdayCals = flRows.reduce((sum, r) => sum + (r.calories || 0), 0);
+    const yesterdayProtein = flRows.reduce((sum, r) => sum + (r.protein_g || 0), 0);
 
     const weight = dl.weight_lbs || hs.weight_lbs || null;
     const energy = dl.energy_score || hs.energy_score || null;
@@ -1083,14 +1086,14 @@ async function loadHealth() {
       weight,
       energyLevel: energy,
       sleepScore: sleep,
-      todayCals: todayCals || null,
-      notes: todayProtein ? "Protein today: " + todayProtein + "g" : (dl.notes || null)
+      yesterdayCals: yesterdayCals || null,
+      notes: yesterdayProtein ? "Protein yesterday: " + yesterdayProtein + "g" : (dl.notes || null)
     });
 
   } catch(err) {
     statusEl.className = "badge badge-amber";
     statusEl.textContent = "Baseline data";
-    el.innerHTML = renderRows({weight:208.8, bmi:30.0, sleepScore:80, energyLevel:null, todayCals:null, notes:null}) +
+    el.innerHTML = renderRows({weight:208.8, bmi:30.0, sleepScore:80, energyLevel:null, yesterdayCals:null, notes:null}) +
       `<div style="margin-top:6px;font-size:10px;color:var(--text-muted);">Log today's briefing to populate · ${err.message}</div>`;
   }
 }
