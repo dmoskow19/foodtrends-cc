@@ -1522,11 +1522,19 @@ function ptDragHandle(id) {
 const PT_FN_URL = SB_URL + '/functions/v1/project-actions';
 
 async function ptAction(body) {
-  await fetch(PT_FN_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': SB_HDR['Authorization'], 'apikey': SB_KEY },
-    body: JSON.stringify(body)
-  });
+  try {
+    var resp = await fetch(PT_FN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': SB_HDR['Authorization'], 'apikey': SB_KEY },
+      body: JSON.stringify(body)
+    });
+    if (!resp.ok) {
+      var errText = await resp.text();
+      console.error('ptAction error:', resp.status, errText);
+    }
+  } catch(e) {
+    console.error('ptAction fetch error:', e);
+  }
   loadProjects();
 }
 
