@@ -691,78 +691,76 @@ tr.pt-drop-below { box-shadow:0 3px 0 0 var(--accent); }
       <div class="card-header" style="flex-wrap:wrap;gap:8px;">
         <span class="card-title">📧 Client Development Pipeline</span>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <span id="cdStatus" class="badge badge-blue">222 active cards</span>
+          <span id="cdStatus" class="badge badge-blue">Loading…</span>
           <div style="display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;">
-            <button class="cd-tab-btn" onclick="cdSetView('send')" style="padding:4px 10px;font-size:10px;font-weight:700;border:none;background:var(--accent);color:#fff;cursor:pointer;font-family:inherit;">📤 Send Today</button>
-            <button class="cd-tab-btn" onclick="cdSetView('pipeline')" style="padding:4px 10px;font-size:10px;font-weight:700;border:none;background:var(--white);color:var(--text-muted);cursor:pointer;font-family:inherit;">📊 Pipeline Health</button>
-            <button class="cd-tab-btn" onclick="cdSetView('calls')" style="padding:4px 10px;font-size:10px;font-weight:700;border:none;background:var(--white);color:var(--text-muted);cursor:pointer;font-family:inherit;">📞 Calls Needed</button>
+            <button class="cd-tab-btn" onclick="cdSetView('triage')" style="padding:4px 10px;font-size:10px;font-weight:700;border:none;background:var(--accent);color:#fff;cursor:pointer;font-family:inherit;">📋 Triage</button>
+            <button class="cd-tab-btn" onclick="cdSetView('send')" style="padding:4px 10px;font-size:10px;font-weight:700;border:none;background:var(--white);color:var(--text-muted);cursor:pointer;font-family:inherit;">📤 Send Today</button>
+            <button class="cd-tab-btn" onclick="cdSetView('pipeline')" style="padding:4px 10px;font-size:10px;font-weight:700;border:none;background:var(--white);color:var(--text-muted);cursor:pointer;font-family:inherit;">📊 Pipeline</button>
+            <button class="cd-tab-btn" onclick="cdSetView('calls')" style="padding:4px 10px;font-size:10px;font-weight:700;border:none;background:var(--white);color:var(--text-muted);cursor:pointer;font-family:inherit;">📞 Calls</button>
+            <button class="cd-tab-btn" onclick="cdSetView('noresponse')" style="padding:4px 10px;font-size:10px;font-weight:700;border:none;background:var(--white);color:var(--text-muted);cursor:pointer;font-family:inherit;">⚠️ No Response</button>
           </div>
         </div>
       </div>
 
-      <!-- SEND TODAY VIEW -->
-      <div id="cdViewSend">
-        <div style="padding:8px 16px;background:var(--accent-light);border-bottom:1px solid var(--accent-mid);font-size:11px;color:var(--accent);font-weight:700;">
-          📤 Emails ready to send from <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="d3b7b2a5bab7fdbe93b5bcbcb7a7a1b6bdb7a0fdb0bcbe">[email&#160;protected]</a> — review, copy, send. Drafted each morning in briefing. Takes under 5 minutes.
+      <!-- TRIAGE QUEUE VIEW (default) -->
+      <div id="cdViewTriage">
+        <div style="padding:8px 16px;background:var(--amber-light);border-bottom:1px solid #fde68a;font-size:11px;color:var(--amber);font-weight:700;">
+          📋 Assign each deal to a bucket: Quick Check-in, Active Pursuit, or Monitor. Sorted by days since order.
         </div>
         <div class="data-table-wrap" style="padding:0;">
           <table class="data-table" style="min-width:700px;">
-            <thead><tr><th>Name</th><th>Company</th><th>Touch #</th><th>Days Since Order</th><th>Email Preview</th><th>HubSpot</th></tr></thead>
-            <tbody id="cdTableSend">
-              <tr><td colspan="6" style="padding:24px;text-align:center;color:var(--text-muted);font-size:12px;">
-                <div style="font-size:22px;margin-bottom:8px;">📋</div>
-                <strong style="color:var(--text-primary);">Monday: Backlog triage → system goes live</strong><br>
-                <span style="font-size:11px;">222 cards in HubSpot pipeline. After triage, today's send queue populates here every briefing.</span><br>
-                <span style="font-size:11px;margin-top:4px;display:block;color:var(--accent);">All emails drafted by Claude. David reviews → sends from <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="3a5e5b4c535e14577a5c55555e4e485f545e4914595557">[email&#160;protected]</a>.</span>
-              </td></tr>
-            </tbody>
+            <thead><tr><th>Contact</th><th>Company</th><th>Days Since Order</th><th>Stage</th><th>Priority</th><th>Assign Bucket</th></tr></thead>
+            <tbody id="cdTableTriage"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SEND TODAY VIEW -->
+      <div id="cdViewSend" style="display:none;">
+        <div style="padding:8px 16px;background:var(--accent-light);border-bottom:1px solid var(--accent-mid);font-size:11px;color:var(--accent);font-weight:700;">
+          📤 Emails drafted by AI. Review, copy, send from david.m@foodtrends.com.
+        </div>
+        <div class="data-table-wrap" style="padding:0;">
+          <table class="data-table" style="min-width:700px;">
+            <thead><tr><th>Contact</th><th>Company</th><th>Bucket</th><th>Touch / Day</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="cdTableSend"></tbody>
           </table>
         </div>
       </div>
 
       <!-- PIPELINE HEALTH VIEW -->
       <div id="cdViewPipeline" style="display:none;">
-        <div style="padding:12px 16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;border-bottom:1px solid var(--light-gray);background:var(--off-white);">
-          <div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:22px;font-weight:700;color:var(--accent);">222</div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;">Active Cards</div></div>
-          <div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:22px;font-weight:700;color:var(--amber);">—</div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;">Touch 1 Pending</div></div>
-          <div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:22px;font-weight:700;color:var(--amber);">—</div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;">Touch 2 Pending</div></div>
-          <div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:22px;font-weight:700;color:var(--amber);">—</div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;">Touch 3 Pending</div></div>
-          <div style="background:var(--red-light);border:1px solid #fca5a5;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:22px;font-weight:700;color:var(--red);">—</div><div style="font-size:10px;color:var(--red);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;font-weight:700;">🔴 Calls Needed</div></div>
-          <div style="background:var(--green-light);border:1px solid #86efac;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:22px;font-weight:700;color:var(--green);">—</div><div style="font-size:10px;color:var(--green);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;font-weight:700;">Repeat Secured</div></div>
-        </div>
-        <div style="padding:10px 16px;border-bottom:1px solid var(--light-gray);">
-          <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">3-Touch Sequence (Sandler-Aligned)</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;">
-            <div style="background:var(--off-white);border-radius:8px;padding:10px 12px;border-left:3px solid var(--accent);"><div style="font-size:11px;font-weight:700;color:var(--accent);">Touch 1 — Day 1-2</div><div style="font-size:11px;color:var(--text-secondary);margin-top:3px;">CEO personal thank you + 1-to-10 satisfaction ask. Warm, no pressure.</div></div>
-            <div style="background:var(--off-white);border-radius:8px;padding:10px 12px;border-left:3px solid var(--amber);"><div style="font-size:11px;font-weight:700;color:var(--amber);">Touch 2 — Day 5-7</div><div style="font-size:11px;color:var(--text-secondary);margin-top:3px;">Brief, specific, references their company. Genuine value-add re-engagement.</div></div>
-            <div style="background:var(--off-white);border-radius:8px;padding:10px 12px;border-left:3px solid var(--text-muted);"><div style="font-size:11px;font-weight:700;color:var(--text-secondary);">Touch 3 — Day 14</div><div style="font-size:11px;color:var(--text-secondary);margin-top:3px;">Closing the loop. Opens door without chasing. No reply → Dormant queue.</div></div>
-          </div>
-        </div>
+        <div id="cdPipelineStats" style="padding:12px 16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;border-bottom:1px solid var(--light-gray);background:var(--off-white);"></div>
         <div class="data-table-wrap" style="padding:0;">
           <table class="data-table" style="min-width:500px;">
             <thead><tr><th>Pipeline Stage</th><th>Count</th><th>What It Means</th></tr></thead>
-            <tbody>
-              <tr><td><span style="font-weight:700;">Event Delivered</span></td><td style="color:var(--amber);font-weight:700;">222</td><td style="color:var(--text-muted);font-size:11px;">New card — Touch 1 email to be drafted this briefing</td></tr>
-              <tr><td><span style="font-weight:700;">Post Event Conversation</span></td><td>—</td><td style="color:var(--text-muted);font-size:11px;">Touch 1 sent, awaiting response</td></tr>
-              <tr><td><span style="font-weight:700;">Growth Identified</span></td><td>—</td><td style="color:var(--text-muted);font-size:11px;">Responded — 📞 call flagged for David within 48hrs</td></tr>
-              <tr><td><span style="font-weight:700;">Repeat Order Secured</span></td><td style="color:var(--green);font-weight:700;">—</td><td style="color:var(--green);font-size:11px;font-weight:700;">✅ Won — recurring client</td></tr>
-              <tr><td><span style="font-weight:700;">Dormant / Needs Reactivation</span></td><td>—</td><td style="color:var(--text-muted);font-size:11px;">Spring menu reactivation campaign (Felix Month 1)</td></tr>
-            </tbody>
+            <tbody id="cdTablePipeline"></tbody>
           </table>
         </div>
       </div>
 
-      <!-- CALLS NEEDED VIEW -->
+      <!-- CALLS & TASTINGS VIEW -->
       <div id="cdViewCalls" style="display:none;">
         <div style="padding:8px 16px;background:var(--red-light);border-bottom:1px solid #fca5a5;font-size:11px;color:var(--red);font-weight:700;">
-          📞 These contacts responded to an email. Call within 48 hours. Talking points prepared for each.
+          📞 These contacts need a call or tasting. Respond within 48 hours.
         </div>
         <div class="data-table-wrap" style="padding:0;">
           <table class="data-table" style="min-width:700px;">
-            <thead><tr><th>Name</th><th>Company</th><th>Responded</th><th>What They Said</th><th>Talking Points</th><th>HubSpot</th></tr></thead>
-            <tbody id="cdTableCalls">
-              <tr><td colspan="6" style="padding:24px;text-align:center;color:var(--text-muted);font-size:12px;">No calls flagged yet.</td></tr>
-            </tbody>
+            <thead><tr><th>Contact</th><th>Company</th><th>Sequence Day</th><th>Response</th><th>Actions</th></tr></thead>
+            <tbody id="cdTableCalls"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- NON-RESPONDERS VIEW -->
+      <div id="cdViewNoresponse" style="display:none;">
+        <div style="padding:8px 16px;background:var(--off-white);border-bottom:1px solid var(--border);font-size:11px;color:var(--text-secondary);font-weight:700;">
+          ⚠️ These deals completed their sequence with no response. Decide: extend, retry, or mark dormant.
+        </div>
+        <div class="data-table-wrap" style="padding:0;">
+          <table class="data-table" style="min-width:700px;">
+            <thead><tr><th>Contact</th><th>Company</th><th>Bucket</th><th>Last Touch</th><th>Days Since</th><th>Actions</th></tr></thead>
+            <tbody id="cdTableNoresponse"></tbody>
           </table>
         </div>
       </div>
@@ -1760,9 +1758,13 @@ function ptSetView(view) {
   if (view === 'done') ptRenderDone();
 }
 
+// ── CLIENT DEVELOPMENT ──────────────────────────────────────
+let cdRows = [];
+const CD_FN_URL = SB_URL + '/functions/v1/cd-actions';
+
 function cdSetView(view) {
-  const views = ['send','pipeline','calls'];
-  const viewIds = {send:'cdViewSend', pipeline:'cdViewPipeline', calls:'cdViewCalls'};
+  const views = ['triage','send','pipeline','calls','noresponse'];
+  const viewIds = {triage:'cdViewTriage', send:'cdViewSend', pipeline:'cdViewPipeline', calls:'cdViewCalls', noresponse:'cdViewNoresponse'};
   views.forEach(v => {
     const el = document.getElementById(viewIds[v]);
     if (el) el.style.display = v===view ? '' : 'none';
@@ -1772,6 +1774,174 @@ function cdSetView(view) {
     btn.style.background = active ? 'var(--accent)' : 'var(--white)';
     btn.style.color = active ? '#fff' : 'var(--text-muted)';
   });
+}
+
+async function cdAction(body) {
+  await fetch(CD_FN_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': SB_HDR['Authorization'], 'apikey': SB_KEY },
+    body: JSON.stringify(body)
+  });
+  loadClientDev();
+}
+
+function cdCopyDraft(id) {
+  var deal = cdRows.find(function(r){ return r.id === id; });
+  if (deal && deal.draft_email) {
+    navigator.clipboard.writeText(deal.draft_email).then(function(){
+      var btn = document.getElementById('cd-copy-' + id);
+      if (btn) { btn.textContent = '✓ Copied'; setTimeout(function(){ btn.textContent = '📋 Copy'; }, 2000); }
+    });
+  }
+}
+
+function cdBucketLabel(b) {
+  return { quick_checkin: '⚡ Quick Check-in', active_pursuit: '🎯 Active Pursuit', monitor: '👀 Monitor' }[b] || b || 'Unassigned';
+}
+
+function cdSeqBadge(status) {
+  var m = {
+    pending: '<span class="badge badge-gray">Pending</span>',
+    email_drafted: '<span class="badge badge-amber">Draft Ready</span>',
+    email_sent: '<span class="badge badge-blue">Sent</span>',
+    call_needed: '<span class="badge badge-red">📞 Call</span>',
+    waiting_response: '<span class="badge badge-amber">⏳ Waiting</span>',
+    responded: '<span class="badge badge-green">✅ Responded</span>',
+    completed: '<span class="badge badge-gray">Completed</span>',
+    dormant: '<span class="badge badge-gray">Dormant</span>'
+  };
+  return m[status] || '<span class="badge badge-gray">' + (status||'—') + '</span>';
+}
+
+function cdRenderTriage() {
+  var rows = cdRows.filter(function(r){ return !r.bucket && r.sequence_status !== 'dormant'; })
+    .sort(function(a,b){ return (b.days_since_order||0) - (a.days_since_order||0); });
+  var el = document.getElementById('cdTableTriage');
+  if (!rows.length) { el.innerHTML = '<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--text-muted);">All deals assigned to buckets.</td></tr>'; return; }
+  el.innerHTML = rows.map(function(r) {
+    return '<tr>' +
+      '<td><b>' + escHtml(r.contact_name||'—') + '</b></td>' +
+      '<td>' + escHtml(r.company_name||'—') + '</td>' +
+      '<td style="font-weight:700;color:' + (r.days_since_order > 14 ? 'var(--red)' : r.days_since_order > 7 ? 'var(--amber)' : 'var(--text-primary)') + ';">' + (r.days_since_order||'—') + 'd</td>' +
+      '<td style="font-size:11px;color:var(--text-muted);">' + escHtml(r.deal_stage_label||'—') + '</td>' +
+      '<td style="font-size:11px;">' + escHtml(r.priority||'medium') + '</td>' +
+      '<td style="white-space:nowrap;">' +
+        '<button class="inbox-action-btn" onclick="cdAction({action:\'assign_bucket\',id:' + r.id + ',bucket:\'quick_checkin\'})" style="font-size:9px;">⚡ Check-in</button> ' +
+        '<button class="inbox-action-btn primary" onclick="cdAction({action:\'assign_bucket\',id:' + r.id + ',bucket:\'active_pursuit\'})" style="font-size:9px;">🎯 Pursue</button> ' +
+        '<button class="inbox-action-btn" onclick="cdAction({action:\'assign_bucket\',id:' + r.id + ',bucket:\'monitor\'})" style="font-size:9px;">👀 Monitor</button>' +
+      '</td></tr>';
+  }).join('');
+}
+
+function cdRenderSend() {
+  var rows = cdRows.filter(function(r){ return r.bucket && r.draft_email && r.draft_status === 'pending'; })
+    .sort(function(a,b){ return (b.days_since_order||0) - (a.days_since_order||0); });
+  var el = document.getElementById('cdTableSend');
+  if (!rows.length) { el.innerHTML = '<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--text-muted);">No emails ready to send. Assign buckets in Triage to generate drafts.</td></tr>'; return; }
+  el.innerHTML = rows.map(function(r) {
+    return '<tr>' +
+      '<td><b>' + escHtml(r.contact_name||'—') + '</b></td>' +
+      '<td>' + escHtml(r.company_name||'—') + '</td>' +
+      '<td style="font-size:11px;">' + cdBucketLabel(r.bucket) + '</td>' +
+      '<td style="font-size:11px;">Touch ' + (r.sequence_day||1) + ' · Day ' + (r.days_since_order||'—') + '</td>' +
+      '<td>' + cdSeqBadge(r.sequence_status) + '</td>' +
+      '<td style="white-space:nowrap;">' +
+        '<button class="inbox-action-btn primary" id="cd-copy-' + r.id + '" onclick="cdCopyDraft(' + r.id + ')" style="font-size:9px;">📋 Copy</button> ' +
+        '<button class="inbox-action-btn success" onclick="cdAction({action:\'approve_email\',id:' + r.id + '})" style="font-size:9px;">✓ Sent</button> ' +
+        '<button class="inbox-action-btn danger" onclick="cdAction({action:\'skip_email\',id:' + r.id + '})" style="font-size:9px;">Skip</button>' +
+      '</td></tr>';
+  }).join('');
+}
+
+function cdRenderPipeline() {
+  var stageMap = {
+    'Event Delivered': { count: 0, color: 'var(--amber)', desc: 'New — needs bucket assignment' },
+    'Post Event Conversation Complete': { count: 0, color: 'var(--accent)', desc: 'Touch 1 sent, awaiting response' },
+    'Growth Identified': { count: 0, color: 'var(--green)', desc: 'Responded — call flagged' },
+    'Repeat Opportunity Active': { count: 0, color: 'var(--accent)', desc: 'Active engagement' },
+    'Repeat Order Secured': { count: 0, color: 'var(--green)', desc: '✅ Won — recurring client' },
+    'Established Client': { count: 0, color: 'var(--green)', desc: 'Ongoing relationship' },
+    'Dormant / Needs Reactivation': { count: 0, color: 'var(--text-muted)', desc: 'Reactivation needed' }
+  };
+  cdRows.forEach(function(r) { if (stageMap[r.deal_stage_label]) stageMap[r.deal_stage_label].count++; });
+
+  var statsEl = document.getElementById('cdPipelineStats');
+  var unassigned = cdRows.filter(function(r){ return !r.bucket; }).length;
+  var inSequence = cdRows.filter(function(r){ return r.bucket && r.sequence_status !== 'dormant' && r.sequence_status !== 'completed'; }).length;
+  var callsNeeded = cdRows.filter(function(r){ return r.task_type === 'call' || r.sequence_status === 'call_needed'; }).length;
+  statsEl.innerHTML =
+    '<div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:22px;font-weight:700;color:var(--accent);">' + cdRows.length + '</div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Total Deals</div></div>' +
+    '<div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:22px;font-weight:700;color:var(--amber);">' + unassigned + '</div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Unassigned</div></div>' +
+    '<div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:22px;font-weight:700;color:var(--accent);">' + inSequence + '</div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">In Sequence</div></div>' +
+    '<div style="background:var(--red-light);border:1px solid #fca5a5;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:22px;font-weight:700;color:var(--red);">' + callsNeeded + '</div><div style="font-size:10px;color:var(--red);text-transform:uppercase;">Calls Needed</div></div>';
+
+  document.getElementById('cdTablePipeline').innerHTML = Object.keys(stageMap).map(function(stage) {
+    var s = stageMap[stage];
+    return '<tr><td><b>' + stage + '</b></td><td style="font-weight:700;color:' + s.color + ';">' + s.count + '</td><td style="font-size:11px;color:var(--text-muted);">' + s.desc + '</td></tr>';
+  }).join('');
+}
+
+function cdRenderCalls() {
+  var rows = cdRows.filter(function(r){ return r.task_type === 'call' || r.sequence_status === 'call_needed'; });
+  var el = document.getElementById('cdTableCalls');
+  if (!rows.length) { el.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-muted);">No calls needed right now.</td></tr>'; return; }
+  el.innerHTML = rows.map(function(r) {
+    return '<tr>' +
+      '<td><b>' + escHtml(r.contact_name||'—') + '</b></td>' +
+      '<td>' + escHtml(r.company_name||'—') + '</td>' +
+      '<td style="font-size:11px;">Day ' + (r.sequence_day||'—') + '</td>' +
+      '<td>' + (r.response_received ? '<span class="badge badge-green">✅ Responded</span>' : '<span class="badge badge-amber">⏳ No response</span>') + '</td>' +
+      '<td><button class="inbox-action-btn primary" onclick="cdAction({action:\'mark_called\',id:' + r.id + '})" style="font-size:9px;">✓ Called</button></td>' +
+    '</tr>';
+  }).join('');
+}
+
+function cdRenderNoresponse() {
+  var rows = cdRows.filter(function(r){ return r.sequence_status === 'completed' && !r.response_received; });
+  var el = document.getElementById('cdTableNoresponse');
+  if (!rows.length) { el.innerHTML = '<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--text-muted);">No non-responders to review.</td></tr>'; return; }
+  el.innerHTML = rows.map(function(r) {
+    var lastTouch = r.last_touch_date ? new Date(r.last_touch_date).toLocaleDateString() : '—';
+    return '<tr>' +
+      '<td><b>' + escHtml(r.contact_name||'—') + '</b></td>' +
+      '<td>' + escHtml(r.company_name||'—') + '</td>' +
+      '<td style="font-size:11px;">' + cdBucketLabel(r.bucket) + '</td>' +
+      '<td style="font-size:11px;">' + lastTouch + '</td>' +
+      '<td style="font-size:11px;">' + (r.days_since_order||'—') + 'd</td>' +
+      '<td style="white-space:nowrap;">' +
+        '<button class="inbox-action-btn" onclick="cdAction({action:\'assign_bucket\',id:' + r.id + ',bucket:\'active_pursuit\'})" style="font-size:9px;">🔄 Retry</button> ' +
+        '<button class="inbox-action-btn danger" onclick="cdAction({action:\'mark_dormant\',id:' + r.id + '})" style="font-size:9px;">💤 Dormant</button>' +
+      '</td></tr>';
+  }).join('');
+}
+
+async function loadClientDev() {
+  var statusEl = document.getElementById('cdStatus');
+  try {
+    var url = SB_URL + '/rest/v1/cd_pipeline?sequence_status=neq.dormant&order=days_since_order.desc&limit=500';
+    var res = await fetch(url, { headers: SB_HDR });
+    cdRows = await res.json();
+    if (!Array.isArray(cdRows)) cdRows = [];
+
+    var unassigned = cdRows.filter(function(r){ return !r.bucket; }).length;
+    var draftsReady = cdRows.filter(function(r){ return r.draft_email && r.draft_status === 'pending'; }).length;
+    statusEl.className = unassigned > 0 ? 'badge badge-amber' : 'badge badge-blue';
+    statusEl.textContent = cdRows.length + ' deals · ' + unassigned + ' to triage' + (draftsReady > 0 ? ' · ' + draftsReady + ' drafts' : '');
+
+    // Update dashboard CD card count
+    var dashCD = document.getElementById('dashCDCards');
+    if (dashCD) dashCD.textContent = cdRows.length;
+
+    cdRenderTriage();
+    cdRenderSend();
+    cdRenderPipeline();
+    cdRenderCalls();
+    cdRenderNoresponse();
+  } catch(e) {
+    console.error('loadClientDev error:', e);
+    statusEl.className = 'badge badge-amber';
+    statusEl.textContent = 'Loading…';
+  }
 }
 
 async function loadProjects() {
@@ -2743,7 +2913,7 @@ async function loadAll() {
   const start = Date.now();
   try {
     await tiRender();
-    await Promise.allSettled([loadInbox(), loadHealth(), loadProjects(), loadBots(), loadNutrition(), loadWorkoutROI()]);
+    await Promise.allSettled([loadInbox(), loadHealth(), loadProjects(), loadBots(), loadNutrition(), loadWorkoutROI(), loadClientDev()]);
   } finally {
     btn.disabled = false;
     icon.className = "";
